@@ -1,0 +1,5 @@
+This library is an adaptation of the NameplateRegistry sub-module of Healers Have To die.
+
+The goal of this library is to properly track nameplates dispatching events upon appearance, disappearance and GUID identification of nameplates. It will also provide a way to iterate through them in various manners.
+
+As this library focuses on optimization and simplicity, it will never try to be compatible with other nameplate add-ons. It will be naturally compatible with such other add-ons as long as they are coded properly. Like Healers Have To Die it will include means (callbacks) of identifying and reporting incompatibility issues so developers can choose to alert their users.
