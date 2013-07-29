@@ -581,6 +581,11 @@ do
         --end
         --@end-debug@
 
+        --- Fires when a plate appears
+        -- **Notes:** Do not modify the plateData table as the library uses it internaly
+        -- @name //Callback //"LNR_ON_NEW_PLATE"
+        -- @param PlateFrame The nameplate which just appeared
+        -- @param PlateData table containing the following fields: 'name', 'reaction', 'type' and 'GUID' (if known)
         LNR_Private:Fire("LNR_ON_NEW_PLATE", PlateFrame, PlateData);
 
         --@debug@
@@ -923,6 +928,10 @@ end -- }}}
 -- public methods: :GetPlateName(), :GetPlateReaction(), :GetPlateType(), :GetPlateGUID(), :GetPlateByGUID(), :EachPlateByName() {{{
 
 --- **LibNameplateRegistry-1.0 public API***
+-- Here is a complete little add-on as an example, it just displays nameplates'
+-- information as they become available.
+--
+--
 -- @usage
 -- local ADDON_NAME, T = ...;
 -- 
@@ -953,7 +962,8 @@ end -- }}}
 -- 
 -- function Example:LNR_ON_NEW_PLATE(eventname, plateFrame, plateData)
 --     print(ADDON_NAME, ":", plateData.name, "'s nameplate appeared!");
---     print(ADDON_NAME, ":", "It's a", plateData.type, "and", plateData.reaction, plateData.GUID and ("we know its GUID: " .. plateData.GUID) or "GUID not yet known");
+--     print(ADDON_NAME, ":", "It's a", plateData.type, "and", plateData.reaction,
+--           plateData.GUID and ("we know its GUID: " .. plateData.GUID) or "GUID not yet known");
 -- end
 -- 
 -- 
@@ -983,8 +993,9 @@ end -- }}}
 
 
 --- Returns a nameplate's unit's name
---@param plateFrame the platename's root frame
---@return The name of the unit as displayed on the nameplate
+-- @name //addon//:GetPlateName
+-- @param plateFrame the platename's root frame
+-- @return The name of the unit as displayed on the nameplate or nil
 function LNR_Public:GetPlateName(plateFrame)
 
     --@debug@
@@ -997,29 +1008,33 @@ function LNR_Public:GetPlateName(plateFrame)
 end
 
 --- Gets a nameplate's unit's reaction toward the player
---@param plateFrame the platename's root frame
---@return either "FRIENDLY", "NEUTRAL", "HOSTILE" or "TAPPED"
+-- @name //addon//:GetPlateReaction
+-- @param plateFrame the platename's root frame
+-- @return either "FRIENDLY", "NEUTRAL", "HOSTILE", "TAPPED" or nil
 function LNR_Public:GetPlateReaction (plateFrame)
     return ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].reaction or nil;
 end
 
 --- Gets a nameplate's unit's type
---@param plateFrame the platename's root frame
---@return either "NPC" or "PLAYER"
+-- @name //addon//:GetPlateType
+-- @param plateFrame the platename's root frame
+-- @return either "NPC", "PLAYER" or nil
 function LNR_Public:GetPlateType (plateFrame)
     return ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].type or nil;
 end
 
 --- Gets a nameplate's unit's GUID if known
---@param plateFrame the platename's root frame
---@return associated unit's GUID as returned by the UnitGUID() WoW API or nil if the GUID is unknown
+-- @name //addon//:GetPlateGUID
+-- @param plateFrame the platename's root frame
+-- @return associated unit's GUID as returned by the UnitGUID() WoW API or nil if the GUID is unknown
 function LNR_Public:GetPlateGUID (plateFrame)
     return ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].GUID or nil;
 end
 
 --- Gets a platename's frame and known associated data using a GUID
---@param GUID a unit GUID as returned by UnitHUID() WoW API
---@return plateFrame, data or nil
+-- @name //addon//:GetPlateByGUID
+-- @param GUID a unit GUID as returned by UnitGUID() WoW API
+-- @return plateFrame, data or nil
 function LNR_Public:GetPlateByGUID (GUID)
 
     if GUID then
@@ -1055,6 +1070,7 @@ do
     end
 
     --- Returns an iterator to iterate through all nameplates sharing an identical name
+    -- @name //addon//:EachPlateByName
     -- @param name The name you want to iterate with
     -- @usage
     -- for frame, data in self:EachPlateByName(unitName) do
@@ -1069,7 +1085,11 @@ do
     end
 end -- }}}
 
---- Registers a LibNameplateRegistry callback (see CallbackHandler-1.0 documentation)
+--- Registers a LibNameplateRegistry callback
+-- It's a simple wrapper to CallbackHandler-1.0's _RegisterCallback() method. 
+--
+-- @name //addon//:LNR_RegisterCallback
+-- @paramsig eventname [, method] [, extraArg]
 -- @param eventname one of "LNR_ON_NEW_PLATE", "LNR_ON_RECYCLE_PLATE", "LNR_ON_GUID_FOUND", "LNR_DEBUG", "LNR_ERROR_FATAL_INCOMPATIBILITY", "LNR_ERROR_GUID_ID_HAMPERED", "LNR_ERROR_SETPARENT_ALERT", "LNR_ERROR_SETSCRIPT_ALERT"
 -- @param method (optional) The method to call when the event fires, if ommitted, addon:eventname is used
 -- @param ... (optional) An optional extra argument that is past to your handler as first argument (after 'self')
