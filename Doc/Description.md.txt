@@ -1,5 +1,44 @@
-This library is an adaptation of the NameplateRegistry sub-module of Healers Have To die.
+This library is an adaptation of the NameplateRegistry.lua sub-module of Healers Have To die.
 
-The goal of this library is to properly track nameplates dispatching events upon appearance, disappearance and GUID identification of nameplates. It will also provide a way to iterate through them in various manners.
+**LibNameplateRegistry-1.0** is an embeddable library providing an abstraction layer for tracking and querying Blizzard's Nameplate frames with ease and efficiency.
 
-As this library focuses on optimization and simplicity, it will never try to be compatible with other nameplate add-ons. It will be naturally compatible with such other add-ons as long as they are coded properly. Like Healers Have To Die it will include means (callbacks) of identifying and reporting incompatibility issues so developers can choose to alert their users.
+Features:
+---------
+- Provides callbacks to track nameplate appearance and disappearance.
+- Caches and maintain nameplates' related data
+- Provides a simple API to extract information from nameplate
+- Links GUID to nameplates
+
+*Please note that **LibNameplateRegistry-1.0** is still in development and so the provided API is quite limited at the moment. Do not hesitate to request features via the ticket system.*
+
+
+As this library focuses on optimization and simplicity, it will never try to be compatible with other nameplate add-ons. It will be naturally compatible with such other add-ons as long as they are coded properly. Like Healers Have To Die it includes means (callbacks) of identifying and reporting incompatibility issues so developers can act accordingly.
+
+
+Documentation is a work in progress, here is a quick list of the implemented
+callbacks and public API
+
+
+** Main callbacks: **
+ LNR_ON_NEW_PLATE,
+ LNR_ON_RECYCLE_PLATE,
+ LNR_ON_GUID_FOUND
+
+** Diagnostic callbacks: **
+ LNR_DEBUG,
+ LNR_ERROR_FATAL_INCOMPATIBILITY,
+ LNR_ERROR_GUID_ID_HAMPERED,
+ LNR_ERROR_SETPARENT_ALERT,
+ LNR_ERROR_SETSCRIPT_ALERT
+
+** Public API: **
+
+:GetPlateName(plateFrame),
+:GetPlateReaction(plateFrame),
+:GetPlateType(plateFrame),
+:GetPlateGUID(plateFrame),
+:GetPlateByGUID(GUID),
+:EachPlateByName()
+
+Until the documentation is complete you can take a look at Healers Have To Die
+latest alpha which uses this library.

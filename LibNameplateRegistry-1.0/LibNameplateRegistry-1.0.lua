@@ -1,5 +1,9 @@
 --[[
         LibNameplateRegistry-1.0
+
+        An embeddable library providing an abstraction layer for tracking and
+        querying Blizzard's Nameplate frames with ease and efficiency.
+
         Copyright (c) 2013 by John Wellesz (Archarodim@teaser.fr)
         
     This program is free software: you can redistribute it and/or modify
@@ -21,7 +25,7 @@
 
 --========= NAMING Convention ==========
 --      VARIABLES AND FUNCTIONS (upvalues excluded)
--- Constants                      == NAME_WORD2 (full uppercase)
+-- Constants                      == NAME_WORD2 (full upper-case)
 -- locals to closures or members  == NameWord2
 -- locals to functions            == nameWord2
 --
@@ -44,9 +48,12 @@
 -- :GetPlateGUID(plateFrame), :GetPlateByGUID(GUID), :EachPlateByName()
 --
 -- TODO: Luadoc
--- TODO: Arg error check on public API
--- TODO: Add a method to decomission properly a Blizzard nameplate
-
+-- - Add args error checking on public API (at least in debug mode?)
+-- - Add a method to decommission properly a Blizzard nameplate
+-- - Add a documentation snippet on nameplate modifications
+-- - Add a :GetNamePlateRegion() method
+-- - Add a :GetPlateClass() method
+--
 
 -- Library framework {{{
 local MAJOR, MINOR = "LibNameplateRegistry-1.0", 1
@@ -446,7 +453,7 @@ function LNR_PRIVATE:CheckHookSanity()
     end
 
 end
-function LNR_PRIVATE:GetBAddon (StackLevel) --- to test
+function LNR_PRIVATE:GetBAddon (StackLevel) -- to test
     local stack = debugstack(1 + StackLevel,2,0);
     if not stack:lower():find("\\libs\\")
         and not stack:find("[/\\]CallbackHandler")
@@ -710,7 +717,7 @@ function LNR_PRIVATE:UPDATE_MOUSEOVER_UNIT()
 
         if failCount > 3 and not HighlightFailsReported then
             HighlightFailsReported = true;
-            self:Fire("LNR_ERROR_GUID_ID_HAMPERED", "|cFFFF0000WARNING:|r Another add-on is unduly modifying Blizzard's default nameplates' manifest (probably by using |cFFFFAA55:SetParent()|r) preventing LibNamePlateRegistry from identifying nameplates accurately. You should report this to the problematic add-on's author.");
+            self:Fire("LNR_ERROR_GUID_ID_HAMPERED", "|cFFFF0000WARNING:|r Another add-on is unduly modifying Blizzard's default nameplates' manifest (probably by using |cFFFFAA55:SetParent()|r) preventing "..MAJOR.." from identifying nameplates accurately. You should report this to the problematic add-on's author.");
         end
 
     end
@@ -911,6 +918,15 @@ end -- }}}
 
 
 -- public methods: :GetPlateName(), :GetPlateReaction(), :GetPlateType(), :GetPlateGUID(), :GetPlateByGUID(), :EachPlateByName() {{{
+--- **LibNameplateRegistry-1.0 public API***
+--@usage
+-- @class file
+-- @name LibNameplateRegistry-1.0.lua
+
+
+--- Returns a nameplate's unit's name
+--@param plateFrame the platename's root frame
+--@return The name of the unit as displayed on the nameplate
 function LNR_PUBLIC:GetPlateName(plateFrame)
 
     --@debug@
@@ -922,18 +938,30 @@ function LNR_PUBLIC:GetPlateName(plateFrame)
     return ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].name or nil;
 end
 
+--- Gets a nameplate's unit's reaction toward the player
+--@param plateFrame the platename's root frame
+--@return either "FRIENDLY", "NEUTRAL", "HOSTILE" or "TAPPED"
 function LNR_PUBLIC:GetPlateReaction (plateFrame)
     return ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].reaction or nil;
 end
 
+--- Gets a nameplate's unit's type
+--@param plateFrame the platename's root frame
+--@return either "NPC" or "PLAYER"
 function LNR_PUBLIC:GetPlateType (plateFrame)
     return ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].type or nil;
 end
 
+--- Gets a nameplate's unit's GUID if known
+--@param plateFrame the platename's root frame
+--@return associated unit's GUID as returned by the UnitGUID() WoW API or nil if the GUID is unknown
 function LNR_PUBLIC:GetPlateGUID (plateFrame)
     return ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].GUID or nil;
 end
 
+--- Gets a platename's frame and known associated data using a GUID
+--@param GUID a unit GUID as returned by UnitHUID() WoW API
+--@returns plateFrame, data or nil
 function LNR_PUBLIC:GetPlateByGUID (GUID)
 
     if GUID then
@@ -967,6 +995,14 @@ do
         end
 
     end
+
+    --- Returns an iterator to iterate through all nameplates sharing an identical name
+    -- @param name The name you want to iterate with
+    -- @usage
+    -- for frame, data in self:EachPlateByName(unitName) do
+    -- -- code
+    -- end
+    -- @return iterator 
     function LNR_PUBLIC:EachPlateByName (name)
         CurrentPlate = nil;
         Name = name;

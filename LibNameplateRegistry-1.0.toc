@@ -3,7 +3,7 @@
 ## X-Min-Interface: 50200
 
 ## Title: Lib: NameplateRegistry-1.0 
-## Notes: Simple nameplate tracking library
+## Notes: an embeddable library providing an abstraction layer for tracking and querying Blizzard's Nameplate frames with ease and efficiency.
 ## Author: John Wellesz
 ## DefaultState: enabled
 ## Version: @project-version@
