@@ -2,24 +2,49 @@
 
 Features:
 ---------
-- Provides callbacks to track nameplate appearance and disappearance.
+- Provides [callbacks][callbacks] to track nameplate appearance and disappearance
 - Caches and maintain nameplates' related data
-- Provides a simple API to extract information from nameplate
+- Provides a simple [API][api] to extract information from nameplate
 - Links GUID to nameplates
 - Provides auto-diagnostic features to detect incompatibilities
 
-Please note that **LibNameplateRegistry-1.0** is _still in development_ and so the provided [API][api] is quite limited at the moment. Do not hesitate to [request features via the ticket system][tickets].
+Please note that **LibNameplateRegistry-1.0** is *still in development* and as
+a result the provided [API][api] is still scarce at the moment.
+
+Do not hesitate to [request features via the ticket system][tickets].
 
 
-As this library focuses on optimization and simplicity, it will never try to be compatible with other nameplate add-ons. It will be naturally compatible with such other add-ons as long as they are coded properly. Like Healers Have To Die it includes means (callbacks) of identifying and reporting incompatibility issues so developers can act accordingly.
+* * * * *
+
+This library focuses on optimization and simplicity, it will never try to
+be compatible with other nameplate add-ons. It will be naturally compatible
+with such other add-ons as long as they are coded properly. It includes means
+([callbacks][callbacks]) of identifying and reporting incompatibility issues
+so incompatible add-ons' users can act accordingly.
+
+* * * * *
+
+To implement **LibNameplateRegistry-1.0** in your add-on:
+
+- Add the following line in your .pkgemeta file:
+
+    -  Libs/LibNameplateRegistry-1.0: git://git.wowace.com/wow/libnameplateregistry-1-0/mainline.git/LibNameplateRegistry-1.0
+
+- Add LibNameplateRegistry-1.0 to the **OptionalDeps** and **X-embeds** fields of your add-on's TOC file. Example:
+
+    - \#\# OptionalDeps: Ace3, LibNameplateRegistry-1.0
+    - \#\# X-Embeds: Ace3, LibNameplateRegistry-1.0
+
+- Add the following line in your embeds.xml file:
+
+    - <Include file="Libs\LibNameplateRegistry-1.0\LibNameplateRegistry-1.0.xml" />
+
+- Finally, check the [API documentation][api] which provides a fully working example and [callbacks details][callbacks].
 
 
-Check the [API documentation][api] and [callbacks details][callbacks] to see how to use this library.
 
 
-
-
-This library is an adaptation of the _NameplateRegistry.lua_ sub-module of [Healers Have To die][HHTD].
+This library is an adaptation of the *NameplateRegistry.lua* sub-module of [Healers Have To die][HHTD].
 
 
 [tickets]: http://www.wowace.com/addons/libnameplateregistry-1-0/tickets/

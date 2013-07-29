@@ -901,10 +901,10 @@ end -- }}}
 
 -- public methods: :GetPlateName(), :GetPlateReaction(), :GetPlateType(), :GetPlateGUID(), :GetPlateByGUID(), :EachPlateByName() {{{
 
---- **LibNameplateRegistry-1.0 public API documentation**\\\\
--- Check the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks page]] if you want details about those.\\
+--- ==LibNameplateRegistry-1.0 public API documentation\\\\
+-- Check the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks page]] if you want details about those.\\\\
 -- Here is a fully working little add-on as an example displaying nameplates' information as they become available.\\
--- For a more advanced usage example you can take a look at the [[http://www.wowace.com/addons/healers-have-to-die/files/|latest version of Healers Have To Die]]\\
+-- For a more advanced usage example you can take a look at the [[http://www.wowace.com/addons/healers-have-to-die/files/|latest version of Healers Have To Die]].\\
 --
 -- @usage
 -- local ADDON_NAME, T = ...;
@@ -1005,10 +1005,10 @@ function LNR_Public:GetPlateGUID (plateFrame)
     return ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].GUID or nil;
 end
 
---- Gets a platename's frame and known associated data using a GUID
+--- Gets a platename's frame and known associated plateData using a GUID
 -- @name //addon//:GetPlateByGUID
 -- @param GUID a unit GUID as returned by UnitGUID() WoW API
--- @return plateFrame, data or nil
+-- @return plateFrame, plateData or nil
 function LNR_Public:GetPlateByGUID (GUID)
 
     if GUID then
@@ -1043,15 +1043,15 @@ do
 
     end
 
-    --- Returns an iterator to iterate through all nameplates sharing an identical name
-    -- Used to iterate through nameplates using their names, since nameplates
-    -- are not necessary unique it's best to always use this method to get a
-    -- nameplate's frame through it's name.
+    --- Returns an iterator to iterate through all nameplates sharing an identical name\\
+    -- Used to iterate through nameplates using their names.\\\\
+    -- Since nameplates are not necessary unique it's best to always use this
+    -- method to get a nameplate's frame through it's name.
     --
     -- @name //addon//:EachPlateByName
     -- @param name The name you want to iterate with
     -- @usage
-    -- for frame, data in self:EachPlateByName(unitName) do
+    -- for frame, plateData in self:EachPlateByName(unitName) do
     -- -- code
     -- end
     -- @return iterator 
@@ -1063,7 +1063,7 @@ do
     end
 end -- }}}
 
---- Registers a LibNameplateRegistry callback
+--- Registers a LibNameplateRegistry callback\\
 -- It's simply wrapping CallbackHandler-1.0's RegisterCallback() method.
 --
 -- @name //addon//:LNR_RegisterCallback

@@ -9,12 +9,11 @@ The 'plateData' table
 
 Several of the following callbacks have a *plateData* argument. This argument
 is a table containing the following fields:
+
 - **.name**: The name of the nameplate's associated unit.
-- **.reaction**: The reaction of the unit as returned by the
-  [:GetPlateReaction() API](http://www.wowace.com/addons/libnameplateregistry-1-0/pages/api/#w-addon-get-plate-reaction-plate-frame)
+- **.reaction**: The reaction of the unit as returned by the [:GetPlateReaction() API](http://www.wowace.com/addons/libnameplateregistry-1-0/pages/api/#w-addon-get-plate-reaction-plate-frame)
 - **.type**: The type of the nameplate as returned by the [:GetPlateType() API](http://www.wowace.com/addons/libnameplateregistry-1-0/pages/api/#w-addon-get-plate-type-plate-frame)
-- **.GUID**: The GUID of the nameplate's associated unit **which may be nil if
-  it's not been found and cached already.**
+- **.GUID**: The GUID of the nameplate's associated unit **which may be nil if it's not been found and cached already.**
 
 This *plateData* argument is a direct reference to the library internal
 registry. It's safe to use when inside a callback's firing scope but in other
@@ -35,12 +34,13 @@ Most of your code related to nameplates will rely on the following callbacks.
 
 *Fires when a nameplate appears on screen*
 
-Registering this event enables LibNameplateRegistry's functionalities. Until
+Registering this callback enables LibNameplateRegistry's functionalities. Until
 then the library remains completely idle.
-Unregistering this event puts the library into an idle state.
+Unregistering this callback puts the library into an idle state.
 
 **Args:**
-- *eventName*: The name of the event
+
+- *callbackName*: The name of the callback
 - *plateFrame*: The nameplate's root frame
 - *plateData*: The up to date data associated to the nameplate (see the plateData table details above)
 
@@ -51,11 +51,12 @@ Unregistering this event puts the library into an idle state.
 *Fires when a nameplate disappears from the screen.*
 
 As you may have noticed, this callback contains the word 'recycle'. It's
-important to understand that a nameplate isn't tied to a single unit but are
+important to understand that a nameplate isn't tied to a single unit but is
 reused to display other units.
 
 **Args:**
-- *eventName*: The name of the event
+
+- *callbackName*: The name of the callback
 - *plateFrame*: The nameplate's root frame
 - *plateData*: The up to date data associated to the nameplate (see the plateData table details above)
 
@@ -67,10 +68,9 @@ reused to display other units.
 
 LibNameplateRegistry has to resorts to tricks to do this. For now it just uses
 two:
-- Nameplate **mouseover highlighting**: nameplates highlight slightly when you
-  mouseover them
-- Nameplate **targeting alpha change**: targetting a nameplate dimm all the other
-  nameplates
+
+- Nameplate **mouseover highlighting**: nameplates highlight slightly when you mouseover them
+- Nameplate **targeting alpha change**: targetting a nameplate dims all the other nameplates
 
 The library detects these changes in the nameplates and is able to precisely
 link nameplates to unit GUIDs.
@@ -80,7 +80,8 @@ NPC the GUID is forgotten as soon as LNR_ON_RECYCLE_PLATE fires since an NPC's
 GUID is not constant. 
 
 **Args:**
-- *eventName*: The name of the event
+
+- *callbackName*: The name of the callback
 - *plateFrame*: The root frame of the nameplate whose GUID was found
 - *GUID*: the GUID that was discovered
 - *methodUsed*: either 'mouseover' or 'target'
@@ -106,12 +107,13 @@ self-destructs (through a precisely controlled implosion without causing any
 collateral damages).
 
 This usually happens when:
+
 - The nameplate manifest has changed.
-- Inconsistencies are detected in hooking nameplate's frames.
+- Inconsistencies are detected while hooking nameplate's frames.
 
 The first can be caused by an upgrade of World of Warcraft (Blizzard regularly
-change nameplates frames) or by another add-on which, instead of hiding
-default Blizzard sub-frames and creating its owns, is modifying and rearranging them.
+changes nameplates frames) or by another add-on which, instead of hiding
+default Blizzard sub-frames and creating its own, is modifying and rearranging them.
 
 The second is always caused by another add-on hooking the nameplates' frames
 the wrong way (by using frame:SetScript() instead of frame:HookScript())
@@ -119,27 +121,28 @@ the wrong way (by using frame:SetScript() instead of frame:HookScript())
 When not in combat LibNameplateRegistry checks its hooks consistency every 10 seconds.
 
 **Args:**
-- *eventName*: The name of the event
-- *icompatibilityType*: A shirt text string describing the problem:
-    - *"NAMEPLATE_MANIFEST"*: The nameplates' frame are no longer following
-      the expected format.
-    - *"HOOK: OnHide"* or *"HOOK: OnShow"*: LibNameplateRegistry missed
-      several nameplate show and hide events.
+
+- *callbackName*: The name of the callback
+- *incompatibilityType*: A short text string describing the problem:
+    
+    - *"NAMEPLATE_MANIFEST"*: The nameplates' frame are no longer following the expected format.
+    - *"HOOK: OnHide"* or *"HOOK: OnShow"*: LibNameplateRegistry missed several nameplate show and hide events.
     - *"HOOK: OnShow missed"* a nameplate is hidden but was never shown...
 
 * * * * * * * *
 
 ### LNR_ERROR_GUID_ID_HAMPERED
 
-*Fires when LibNameplateRegistry fails to detect nameplates' mouseover
+*Fires when LibNameplateRegistry fails to detect nameplates' mouse-hovering
 highlighting*
 
 This happens when another add-on is unduly modifying the nameplates.
-This error is not fatal but LibNameplateRegistry will have much more trouble
-to link nameplates to GUID...
+This error is not fatal but LibNameplateRegistry will fail to link nameplates
+to GUID...
 
 **Args:**
-- *eventName*: The name of the event
+
+- *callbackName*: The name of the callback
 - *message*: A pre-formatted message to display to your users
 
 * * * * * * * *
@@ -163,7 +166,8 @@ This has proven to be very effective to get problematic add-ons' author's
 attention.
 
 **Args:**
-- *eventName*: The name of the event
+
+- *callbackName*: The name of the callback
 - *baddon*: The problematic add-on's name
 - *message*: A pre-formatted message to display to your users
 
@@ -171,7 +175,7 @@ attention.
 
 ### LNR_ERROR_SETSCRIPT_ALERT
 
-*Fires when another add-on is caughed red-handed using :SetScript() instead of
+*Fires when another add-on is caught red-handed using :SetScript() instead of
 ":HookScript()*
 
 This callback reports the name of the add-on and the offending file and line
@@ -181,9 +185,10 @@ Should be used in the same way than LNR_ERROR_SETPARENT_ALERT.
 
 
 **Args:**
-- *eventName*: The name of the event
+
+- *callbackName*: The name of the callback
 - *baddon*: The problematic add-on's name
-- *proof*: Two line of the stack containing the the file name and line number.
+- *proof*: Two line of the stack containing the file name and line number.
 - *message*: A pre-formatted message to display to your users
 
 * * * * * * * *
@@ -192,13 +197,13 @@ Should be used in the same way than LNR_ERROR_SETPARENT_ALERT.
 
 *Fires at every 'Debug()' call in LibNameplateRegistry*
 
-Useful when developping, you should register this event before LNR_ON_NEW_PLATE.
+Useful when developing, you should register this callback before LNR_ON_NEW_PLATE.
 
 
 **Args:**
-- *eventName*: The name of the event
-- *level*: The level of debugging (1 to 4 where 1 is an error, 2 a warning, 3
-  and 4 are informational)
+
+- *callbackName*: The name of the callback
+- *level*: The level of debugging (1 to 4 where 1 is an error, 2 a warning, 3 and 4 informational)
 - *libMinor*: The MINOR revision of LibNameplateRegistry
 - *...*: unlimited list of debug arguments that can be past to print();
 
