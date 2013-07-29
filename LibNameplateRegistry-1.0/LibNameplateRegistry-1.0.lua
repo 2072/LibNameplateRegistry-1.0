@@ -901,14 +901,11 @@ end -- }}}
 
 -- public methods: :GetPlateName(), :GetPlateReaction(), :GetPlateType(), :GetPlateGUID(), :GetPlateByGUID(), :EachPlateByName() {{{
 
---- ==LibNameplateRegistry-1.0 public API documentation
--- \\
--- Check the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks' page]] if you want details about those.
--- \\
+--- **LibNameplateRegistry-1.0 public API documentation**\\\\
+-- Check the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks page]] if you want details about those.\\
 -- Here is a fully working little add-on as an example displaying nameplates' information as they become available.\\
--- \\
--- //For a more advanced usage example you can take a look at the [[http://www.wowace.com/addons/healers-have-to-die/files/|latest version of Healers Have To Die]]//
--- \\
+-- For a more advanced usage example you can take a look at the [[http://www.wowace.com/addons/healers-have-to-die/files/|latest version of Healers Have To Die]]\\
+--
 -- @usage
 -- local ADDON_NAME, T = ...;
 -- 
