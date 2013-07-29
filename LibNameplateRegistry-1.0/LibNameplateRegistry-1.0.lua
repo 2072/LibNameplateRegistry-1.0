@@ -19,9 +19,1161 @@
 
 
 
+--========= NAMING Convention ==========
+--      VARIABLES AND FUNCTIONS (upvalues excluded)
+-- Constants                      == NAME_WORD2 (full uppercase)
+-- locals to closures or members  == NameWord2
+-- locals to functions            == nameWord2
+--
+--      TABLES
+--  Closure or file locals        == Name_Word2
+--  locals                        == name_word2
+--  members                       == Name_Word2
+
+
+
+-- ======== Main callbacks: ========
+-- LNR_ON_NEW_PLATE, LNR_ON_RECYCLE_PLATE, LNR_ON_GUID_FOUND
+--
+-- ======== Diagnostic callbacks: ========
+-- LNR_DEBUG, LNR_ERROR_FATAL_INCOMPATIBILITY, LNR_ERROR_GUID_ID_HAMPERED, LNR_ERROR_SETPARENT_ALERT, LNR_ERROR_SETSCRIPT_ALERT
+--
+-- ======== Public API: ========
+--
+-- :GetPlateName(plateFrame), :GetPlateReaction(plateFrame), :GetPlateType(plateFrame),
+-- :GetPlateGUID(plateFrame), :GetPlateByGUID(GUID), :EachPlateByName()
+--
+-- TODO: Luadoc
+-- TODO: Arg error check on public API
+-- TODO: Add a method to decomission properly a Blizzard nameplate
+
+
+-- Library framework {{{
 local MAJOR, MINOR = "LibNameplateRegistry-1.0", 1
 
-local NameplateRegistry = LibStub:NewLibrary(MAJOR, MINOR)
-if not NameplateRegistry then return end
+if not LibStub then
+    error(MAJOR .. " requires LibStub");
+    return
+end
+
+if not LibStub("AceTimer-3.0") then
+    error(MAJOR .. " requires AceTimer-3.0");
+    return;
+end
+
+if not LibStub("CallbackHandler-1.0") then
+    error(MAJOR .. " requires CallbackHandler-1.0");
+    return;
+end
+
+local _, oldMinor =  LibStub:GetLibrary(MAJOR, true);
+
+-- I do not want to expose the library internals to the outside world in order
+-- to limit Murphy's law influence. This is unusual for a WoW library but still, it's worth trying.
+
+local LNR_PRIVATE; -- holder for all our private workset
+
+if oldMinor and oldMinor < MINOR then
+    LNR_PRIVATE = LibStub(MAJOR):Quit(); -- ask the older library to destroy itself properly clearing all its local caches.
+end
+
+LNR_PRIVATE = LNR_PRIVATE or {};
+
+local LNR_PUBLIC, oldMinor = LibStub:NewLibrary(MAJOR, MINOR)
+if not LNR_PUBLIC then return end -- no upgrade required
+
+
+LibStub("AceTimer-3.0"):Embed(LNR_PRIVATE); -- adds: :CancelAllTimers(), :CancelTimer(), :ScheduleRepeatingTimer(), :ScheduleTimer(), :TimeLeft();
+LNR_PRIVATE.callbacks = LNR_PRIVATE.callbacks or LibStub("CallbackHandler-1.0"):New(LNR_PRIVATE);
+LNR_PRIVATE.Fire      = LNR_PRIVATE.callbacks.Fire;
+
+LNR_PUBLIC.LNR_RegisterCallback = function (caller, eventname, method, ...)
+    LNR_PRIVATE.RegisterCallback(caller, eventname, method, ...);
+end
+
+LNR_PUBLIC.LNR_UnregisterCallback = function (caller, eventname)
+    LNR_PRIVATE.UnregisterCallback(caller, eventname);
+end
+
+LNR_PUBLIC.LNR_UnregisterAllCallbacks = function (caller, ...)
+    LNR_PRIVATE.UnregisterAllCallbacks(caller, ...);
+end
+
+
+local function Debug(level, ...)
+    LNR_PRIVATE:Fire("LNR_DEBUG", level, MINOR, ...);
+end
+
+function LNR_PRIVATE:FatalIncompatibilityError(icompatibilityType)
+    LNR_ENABLED = false; -- will prevent hooks from hooking
+
+    -- do not send the message right away because we don't know what's happening. (we might be inside a metatable's callback for all we know...)
+    self:ScheduleTimer(function() 
+        LNR_PRIVATE:Fire("LNR_ERROR_FATAL_INCOMPATIBILITY", icompatibilityType);
+        LNR_PUBLIC:Quit();
+        error(MAJOR..MINOR..' has died due to a serious incompatibility issue: ' .. icompatibilityType);
+    end, 0.01);
+
+end
+
+--}}}
+
+-- Lua and Blizzard upvalues {{{
+local _G                    = _G;
+local GetTime               = _G.GetTime;
+local assert                = _G.assert;
+local pairs                 = _G.pairs;
+local ipairs                = _G.ipairs;
+local select                = _G.select;
+local unpack                = _G.unpack;
+local setmetatable          = _G.setmetatable;
+local twipe                 = _G.table.wipe;
+local GetMouseFocus         = _G.GetMouseFocus;
+local UnitExists            = _G.UnitExists;
+local UnitGUID              = _G.UnitGUID;
+local UnitName              = _G.UnitName;
+local InCombatLockdown      = _G.InCombatLockdown;
+
+local WorldFrame            = _G.WorldFrame;
+local tostring              = _G.tostring;
+-- }}}
+
+-- CONSTANTS and library local variables {{{
+
+-- Debug templates
+
+local ERROR     = 1;
+local WARNING   = 2;
+local INFO      = 3;
+local INFO2     = 4;
+
+local LNR_ENABLED = false; -- must stay local to the file, it's used to disable hooked Scripts which cannot be removed
+
+
+-- State variable that we keep local, when upgrading we restart from scratch
+local PlateRegistry_per_frame   =  {};
+local ActivePlates_per_frame    =  {};
+local CurrentTarget             = false;
+local HasTarget                 = false;
+local TargetCheckScannedAll     = false;
+
+--@debug@
+local callbacks_consisistency_check = {}; -- XXX
+--@end-debug@
+--}}}
+
+-- Clever cache tables: Frame_Children_Cache, Frame_Regions_Cache, Plate_Parts_Cache {{{ 
+
+-- Various cache tables (WARNING: those shall be destroyed upon upgrading using :Quit())
+
+
+
+local Frame_Children_Cache = setmetatable({}, {__index =
+-- frame cache
+function(t, frame)
+
+    t[frame] = setmetatable({}, {__index =
+            -- children per number cache
+            function(t, childNum)
+
+                t[childNum] = (select(childNum, frame:GetChildren())) or false;
+
+                if not t[childNum] then
+                    t[childNum] = nil;
+                    LNR_PRIVATE:FatalIncompatibilityError('NAMEPLATE_MANIFEST');
+                    error("CFCache: Child" .. childNum .. " not found.");
+                end
+
+                --@debug@
+                Debug(INFO, 'cached a new frame child', childNum);
+                --@end-debug@
+                return  t[childNum];
+
+            end
+        })
+    
+    return t[frame];
+end
+
+});
+
+local Frame_Regions_Cache = setmetatable({}, {__index =
+-- frame cache
+function(t, frame)
+    -- region cache
+    t[frame] = setmetatable({}, {__index =
+            -- children per number cache
+            function(t, regionNum)
+
+                t[regionNum] = (select(regionNum, frame:GetRegions())) or false;
+
+                if not t[regionNum] then
+                    t[regionNum] = nil;
+                    LNR_PRIVATE:FatalIncompatibilityError('NAMEPLATE_MANIFEST');
+                    error( "CFCache: Region" .. regionNum .. " not found.");
+                end
+
+                --@debug@
+                Debug(INFO, 'cached a new frame region', regionNum);
+                --@end-debug@
+                return t[regionNum];
+
+            end
+        })
+        return t[frame];
+    end
+});
+
+
+-- we could fuse Frame_Regions_Cache and Frame_Children_Cache into this one but
+-- it's best to keep the three of them for better clarity
+local Plate_Parts_Cache = setmetatable ({}, {__index =
+
+function (t, plateFrame)
+    t[plateFrame] = setmetatable({}, {__index =
+        function (t, regionName)
+            if regionName == 'name' then
+                t[regionName] = Frame_Regions_Cache[  Frame_Children_Cache[plateFrame][2]  ][1];
+            elseif regionName == 'statusBar' then
+                t[regionName] = Frame_Children_Cache[  Frame_Children_Cache[plateFrame][1]  ][1];
+            elseif regionName == 'highlight' then
+                t[regionName] = Frame_Regions_Cache[  Frame_Children_Cache[plateFrame][1]  ][3];
+            end
+            --@debug@
+            Debug(INFO, 'cached a new plateFrame part:', regionName);
+            --@end-debug@
+            return t[regionName];
+        end
+    })
+    return t[plateFrame];
+end
+})
+
+-- }}}
+
+--Name to GUID cache mechanism for players (their GUID are constant) -- AddGUIDToCache, GetGUIDFromCache, GUIDCacheQuit {{{
+do
+    local NameToGUID = {['FRIENDLY'] = {}, ['HOSTILE'] = {}, ["NEUTRAL"] = {}};
+    local KnownNames = {};
+    local data, oldName;
+    local LIMIT = 200;
+    local CurrentCacheIndex = 1;
+
+
+    function LNR_PRIVATE:AddGUIDToCache(data)
+
+        if data.type ~= 'PLAYER' then
+            return;
+        end
+
+        oldName = KnownNames[CurrentCacheIndex];
+
+        if oldName then
+            if NameToGUID['FRIENDLY'][oldName] then NameToGUID['FRIENDLY'][oldName] = nil; end
+            if NameToGUID['HOSTILE'][oldName]  then NameToGUID['HOSTILE'] [oldName] = nil; end
+            if NameToGUID['NEUTRAL'][oldName]  then NameToGUID['NEUTRAL'] [oldName] = nil; end
+        end
+
+        KnownNames[CurrentCacheIndex] = data.name;
+
+        NameToGUID[data.reaction][data.name] = data.GUID;
+
+        CurrentCacheIndex = CurrentCacheIndex % LIMIT + 1;
+        Debug(INFO, 'AddGUIDToCache() CurrentCacheIndex=', CurrentCacheIndex);
+    end
+
+
+    function LNR_PRIVATE:GetGUIDFromCache(frame)
+        data = PlateRegistry_per_frame[frame];
+
+        if data.type ~= 'PLAYER' then
+            return false;
+        end
+
+        return NameToGUID[data.reaction][data.name] or false;
+    end
+
+    function LNR_PRIVATE:GUIDCacheQuit()
+        twipe(NameToGUID); NameToGUID = nil;
+        twipe(KnownNames); KnownNames = nil;
+    end
+
+end -- }}}
+
+-- Internal helper private methods {{{
+function LNR_PRIVATE:IsPlateTargeted (frame)
+    if not HasTarget then
+        return false;
+    end
+
+    if CurrentTarget == frame then -- we already told you
+        Debug(WARNING, 'CurrentTarget == frame');
+        return true;
+    elseif CurrentTarget then -- we know it's not that one
+        return false;
+    end
+
+    if not ActivePlates_per_frame[frame] or not ActivePlates_per_frame[frame].name then -- it's not even on the screen...
+        return false;
+    end
+
+    CurrentTarget = frame:GetAlpha() == 1 and frame or false;
+
+    return CurrentTarget == frame;
+end
+
+
+function LNR_PRIVATE.RawGetPlateName (frame)
+    return Plate_Parts_Cache[frame].name:GetText();
+end
+
+
+--@debug@
+-- this is used to diagnos colors when debugging
+local DiffColors = { ['r'] = {}, ['g'] = {}, ['b'] = {}, ['a'] = {} };
+local DiffColors_ExpectedDiffs = 0;
+--@end-debug@
+
+function LNR_PRIVATE.RawGetPlateType (frame)
+
+    local r, g, b, a = Plate_Parts_Cache[frame].statusBar:GetStatusBarColor();
+
+    --@debug@
+    DiffColors['r'][r] = true;
+    DiffColors['g'][g] = true;
+    DiffColors['b'][b] = true;
+    DiffColors['a'][a] = true;
+    --@end-debug@
+
+    -- the following block is borrowed from TidyPlates
+    if r < .01 then 	-- Friendly
+        if b < .01 and g > .99 then return "FRIENDLY", "NPC" 
+        elseif b > .99 and g < .01 then return "FRIENDLY", "PLAYER"
+        end
+    elseif r > .99 then
+        if b < .01 and g > .99 then return "NEUTRAL", "NPC"
+        elseif b < .01 and g < .01 then return "HOSTILE", "NPC" 
+        end
+    elseif r > .53 then
+        if g > .5 and g < .6 and b > .99 then return "TAPPED", "NPC" end 	-- .533, .533, .99	-- Tapped Mob
+    end
+
+    return "HOSTILE", "PLAYER" 
+end
+
+
+do
+
+    local PlateData;
+
+    function LNR_PRIVATE:UpdateCache (plateFrame) -- can be used on both active and hidden plates
+        PlateData = PlateRegistry_per_frame[plateFrame]; -- data can only be true if the plate is actually shown
+
+        PlateData.name = LNR_PRIVATE.RawGetPlateName(plateFrame);
+        PlateData.reaction, PlateData.type = LNR_PRIVATE.RawGetPlateType(plateFrame);
+        PlateData.GUID = LNR_PRIVATE:GetGUIDFromCache(plateFrame);
+    end
+
+    local function IsGUIDValid (plateFrame)
+        if ActivePlates_per_frame[plateFrame].GUID and ActivePlates_per_frame[plateFrame].name == LNR_PRIVATE.RawGetPlateName(plateFrame) then
+            return ActivePlates_per_frame[plateFrame].GUID;
+        else
+            ActivePlates_per_frame[plateFrame].GUID = false;
+            return false;
+        end
+    end
+
+    local Getters = {
+        ['name'] = LNR_PRIVATE.RawGetPlateName,
+        ['reaction'] = LNR_PRIVATE.RawGetPlateType, -- 1st
+        ['type'] = function (plateFrame) return select(2, LNR_PRIVATE.RawGetPlateType(plateFrame)); end, -- 2nd
+        ['GUID'] = IsGUIDValid,
+    };
+    function LNR_PRIVATE:ValidateCache (plateFrame, entry)
+        PlateData = ActivePlates_per_frame[plateFrame];
+
+        if not PlateData then
+            return -1;
+        end
+
+        if not PlateData[entry] then
+            return -2;
+        end
+
+        if PlateData[entry] == (Getters[entry](plateFrame)) then
+            return 0;
+        else
+            Debug(WARNING, 'Cache validation failed for entry', entry, 'on plate named', PlateData.name);
+            self:UpdateCache(plateFrame);
+            return 1;
+        end
+    end
+end
+
+-- }}}
+
+
+-- Diagnostic related methods {{{
+
+function LNR_PRIVATE:CheckHookSanity()
+
+    if InCombatLockdown() then
+        return
+    end
+
+    local count = 0;
+    local hookInconsistency = false;
+
+    for frame, data in pairs(PlateRegistry_per_frame) do
+
+        count = count + 1;
+
+        if frame:IsShown()then
+            if not ActivePlates_per_frame[frame] then
+                hookInconsistency = 'OnShow';
+                Debug(ERROR, "CheckHookSanity(): OnShow hook failed");
+            end
+        else
+            if ActivePlates_per_frame[frame] then
+                hookInconsistency = 'OnHide';
+                Debug(ERROR, "CheckHookSanity(): OnHide hook failed");
+            end
+        end
+    end
+
+    if hookInconsistency then
+        self:FatalIncompatibilityError('HOOK: '..hookInconsistency);
+    end
+
+end
+function LNR_PRIVATE:GetBAddon (StackLevel) --- to test
+    local stack = debugstack(1 + StackLevel,2,0);
+    if not stack:lower():find("\\libs\\")
+        and not stack:find("[/\\]CallbackHandler")
+        and not stack:find("[/\\]AceTimer")
+        and not stack:find("[/\\]AceHook")
+        and not stack:find("[/\\]AceEvent") then
+
+        --[[
+        if stack:find("[/\\]Healers-Have-To-Die") then -- XXX
+            Debug(ERROR, "GetBAddon failed!");
+            return false;
+        end
+        --]]
+
+        return stack:match("[/\\]AddOns[/\\]([^/\\]+)[/\\]"), stack;
+    else
+        Debug(WARNING, 'SetScript called but not reported:', stack);
+        return false;
+    end
+end
+
+--@debug@
+do
+    local ShownPlateCount = 0;
+    local DiffColorsCount = 0;
+    function LNR_PRIVATE:DebugTests()
+        --if not HHTD.db.global.Debug then return end;
+
+        -- check displayed plates
+        local count = 0; local names = {};
+        for frame in pairs(ActivePlates_per_frame) do
+            count = count + 1;
+            --table.insert(names, PlateRegistry_per_frame[frame].name);
+            --table.insert(names, '['.. PlateRegistry_per_frame[frame].type .. ']' .. ', ');
+        end
+
+        if count ~= ShownPlateCount then
+            ShownPlateCount = count;
+            Debug(INFO2, DiffColorsCount, ' dCs - ', ShownPlateCount, 'plates are shown:', unpack(names));
+        end
+
+        -- check number of different health bars colors
+        local counts = {['r'] = 0, ['g'] = 0, ['b'] = 0, ['a'] = 0};
+        count = 0;
+        for component,values in pairs(DiffColors) do
+            for value in pairs(values) do
+                counts[component] = counts[component] + 1;
+                count = count + 1;
+            end
+        end
+
+        if count ~= DiffColorsCount then
+
+            DiffColorsCount = count;
+            Debug(INFO2, DiffColorsCount, 'health colors:', 'r=', counts['r'], 'g=', counts['g'], 'b=', counts['b'], 'a=', counts['a']);
+        end
+
+    end
+end
+--@end-debug@
+
+-- }}}
+
+
+
+-- - plate hooks methods :  PlateOnShow, PlateOnHide, PlateOnChange {{{
+
+
+local PlateOnShow, PlateOnHide, PlateOnChange; -- these functions cannot be upgraded
+do 
+    local PlateFrame, PlateData, PlateName;
+        --@debug@
+    local testCase1 = false;
+        --@end-debug@
+
+    function PlateOnShow (PlateFrame)
+        --Debug(INFO, "PlateOnShow", healthBar.LNR_ParentPlate:GetName());
+
+        if not LNR_ENABLED then
+            return;
+        end
+
+        -- PlateFrame = healthBar.LNR_ParentPlate;
+
+        --@debug@
+        testCase1 = false;
+        if ActivePlates_per_frame[PlateFrame] then -- test onHide hook
+            testCase1 = true;
+        end
+
+        if not callbacks_consisistency_check[PlateFrame] then
+            callbacks_consisistency_check[PlateFrame] = 1;
+        else
+            callbacks_consisistency_check[PlateFrame] = callbacks_consisistency_check[PlateFrame] + 1;
+        end
+
+        if callbacks_consisistency_check[PlateFrame] ~= 1 then
+            Debug(ERROR, 'PlateOnShow/hide sync broken:', callbacks_consisistency_check[PlateFrame]);
+        end
+
+        --@end-debug@
+
+        PlateData = PlateRegistry_per_frame[PlateFrame];
+        PlateName = LNR_PRIVATE.RawGetPlateName(PlateFrame);
+
+        ActivePlates_per_frame[PlateFrame] = PlateData;
+
+        if CurrentTarget == PlateFrame then
+            CurrentTarget = false; -- it can't be true --> recycling occured obviously
+        end
+        TargetCheckScannedAll = false;
+
+
+        PlateData.name = PlateName;
+        PlateData.reaction, PlateData.type = LNR_PRIVATE.RawGetPlateType(PlateFrame);
+        PlateData.GUID = LNR_PRIVATE:GetGUIDFromCache(PlateFrame);
+
+        --@debug@
+        --if PlateData.GUID then
+        --Debug(INFO, 'GUID was set during onshow for ', PlateData.name);
+        --HHTD:Hickup(10);
+        --end
+        --@end-debug@
+
+        LNR_PRIVATE:Fire("LNR_ON_NEW_PLATE", PlateFrame, PlateData);
+
+        --@debug@
+        if testCase1 then
+            error('onHide() failed for ' .. tostring(LNR_PRIVATE.RawGetPlateName(PlateFrame)));
+        end
+        --@end-debug@
+    end
+
+    function PlateOnHide (PlateFrame)
+        --Debug(INFO2, "PlateOnHide", healthBar.LNR_ParentPlate:GetName());
+
+        if not LNR_ENABLED then
+            return;
+        end
+
+        -- PlateFrame = healthBar.LNR_ParentPlate;
+
+        if not ActivePlates_per_frame[PlateFrame] then
+            LNR_PRIVATE:FatalIncompatibilityError('HOOK: '..'OnShow missed');
+            return;
+        end
+
+        --@debug@
+        if not callbacks_consisistency_check[PlateFrame] then
+            callbacks_consisistency_check[PlateFrame] = 0;
+        else
+            callbacks_consisistency_check[PlateFrame] = callbacks_consisistency_check[PlateFrame] - 1;
+        end
+        --@end-debug@
+
+        PlateData = PlateRegistry_per_frame[PlateFrame];
+        PlateData.GUID = false;
+
+        LNR_PRIVATE:UpdateCache(PlateFrame); -- make sure everything is accurate
+        LNR_PRIVATE:Fire("LNR_ON_RECYCLE_PLATE", PlateFrame, PlateData);
+
+
+        if PlateFrame == CurrentTarget then
+            CurrentTarget = false;
+            Debug(INFO2, 'Current Target\'s plate was hidden');
+        end
+
+        ActivePlates_per_frame[PlateFrame] = nil;
+
+    end
+
+    function PlateOnChange (healthBar)
+
+        if not LNR_ENABLED then
+            return;
+        end
+
+        PlateFrame = healthBar.LNR_ParentPlate;
+
+        PlateData = ActivePlates_per_frame[PlateFrame];
+
+        if not PlateData then
+            return;
+        end
+
+        -- if the name has changed or the reaction is different then trigger a recycling
+        if PlateData.name ~= LNR_PRIVATE.RawGetPlateName(PlateFrame) or PlateData.reaction ~= (LNR_PRIVATE.RawGetPlateType(PlateFrame)) then
+            --@debug@
+            Debug(WARNING, "PlateOnChange for '", PlateData.name, "' rawName:'", LNR_PRIVATE.RawGetPlateName(PlateFrame), 'r:', PlateData.reaction, PlateData.type, 'rawr:',  LNR_PRIVATE.RawGetPlateType(PlateFrame));
+            --@end-debug@
+            
+            -- we do not issue an LNR_ON_CHANGE_PLATE because we want to send
+            -- the former PlateData to the recycling handler so add-ons can
+            -- track what's happening. We could implement a LNR_ON_CHANGE_PLATE
+            -- which would send both data set but this would imply a table copy
+            -- operation and would be error prone... Here we prefer simplicity over elegance.
+            LNR_PRIVATE:Fire("LNR_ON_RECYCLE_PLATE", PlateFrame, PlateData);
+
+            LNR_PRIVATE:UpdateCache(PlateFrame);
+
+            LNR_PRIVATE:Fire("LNR_ON_NEW_PLATE", PlateFrame, PlateData);
+
+        end
+
+    end
+end -- }}}
+
+
+-- Event handlers : PLAYER_TARGET_CHANGED, UPDATE_MOUSEOVER_UNIT {{{
+
+function LNR_PRIVATE:PLAYER_TARGET_CHANGED()
+    
+    Debug(INFO, 'Target Changed');
+
+    if UnitExists('target') then
+        CurrentTarget = (self:GetPlateByGUID(UnitGUID('target'))) or false;
+        HasTarget = true;
+        TargetCheckScannedAll = false;
+        if not self.TargetCheckTimer then
+            self.TargetCheckTimer = self:ScheduleRepeatingTimer(self.CheckPlatesForTarget, 0.3, self);
+        end
+    else
+        CurrentTarget = false; -- we don't know anymore
+        HasTarget = false;
+        self:CancelTimer(self.TargetCheckTimer);
+        self.TargetCheckTimer = false;
+    end
+
+end
+
+local HighlightFailsReported = false;
+function LNR_PRIVATE:UPDATE_MOUSEOVER_UNIT()
+
+    local unitName = "";
+    if GetMouseFocus() == WorldFrame then -- the cursor is either on a name plate or on a 3d model (ie: not on a unit-frame)
+        --Debug(INFO, "UPDATE_MOUSEOVER_UNIT");
+
+        local failCount = 0;
+        for frame, data in pairs(ActivePlates_per_frame) do
+            if not data.GUID and Plate_Parts_Cache[frame].highlight:IsShown() then -- test for highlight among shown plates
+
+                data.GUID = UnitGUID('mouseover');
+                unitName = UnitName('mouseover');
+
+                if unitName == data.name and self:ValidateCache(frame, 'name') == 0 then
+                    self:AddGUIDToCache(data);
+                    self:Fire("LNR_ON_GUID_FOUND", frame, data.GUID, 'mouseover');
+                    --@debug@
+                    Debug(INFO, 'Guid found for', data.name, 'mouseover');
+                    --@end-debug@
+
+                    break; -- we found what we were looking for, no need to continue
+                else
+                    Debug(HighlightFailsReported and INFO2 or WARNING, 'bad cache on highlight check:', unitName, "V/S:", data.name, 'mouseover');
+                    failCount = failCount + 1;
+                end
+                
+                
+            end
+        end
+
+        if failCount > 3 and not HighlightFailsReported then
+            HighlightFailsReported = true;
+            self:Fire("LNR_ERROR_GUID_ID_HAMPERED", "|cFFFF0000WARNING:|r Another add-on is unduly modifying Blizzard's default nameplates' manifest (probably by using |cFFFFAA55:SetParent()|r) preventing LibNamePlateRegistry from identifying nameplates accurately. You should report this to the problematic add-on's author.");
+        end
+
+    end
+end
+
+-- }}}
+
+do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarget() {{{
+
+    local hooksecurefunc = _G.hooksecurefunc;
+    local WorldFrame = WorldFrame
+    local WorldFrameChildrenNumber = 0;
+    local temp = 0;
+    local frameName;
+
+    local NotPlateCache = {};
+    local DidSnitched = false;
+    local HealthBar;
+
+    local function SetParentAlert (frame)
+        if not LNR_ENABLED then
+            return;
+        end
+
+        if DidSnitched then
+            return;
+        end
+
+        local baddon = LNR_PRIVATE:GetBAddon(2);
+
+        if baddon then
+            DidSnitched = true;
+
+            local alertMessage = "|cFFFF0000WARNING:|r Apparently the add-on |cffee2222" .. baddon:upper() .. "|r is reparenting Blizzard's nameplates elements. This prevent any other add-on from reading or modifying nameplates. You should contact |cffee2222" .. baddon:upper() .. "|r's author about this.";
+
+            LNR_PRIVATE:Fire("LNR_ERROR_SETPARENT_ALERT", baddon, alertMessage);
+        end
+
+    end
+
+    local function SetScriptAlert(frame, script, func)
+        if not LNR_ENABLED then
+            return;
+        end
+
+        -- re-apply our hooks then...
+        if script == "OnShow" then
+            frame:HookScript("OnShow", PlateOnShow);
+        elseif script == "OnHide" then
+            frame:HookScript("OnHide", PlateOnHide);
+        --elseif script == "OnMinMaxChanged" then
+          --  frame:HookScript("OnMinMaxChanged", PlateOnChange);
+        end
+
+        --@debug@
+        --Debug(WARNING, "SetScript(OnSHow/Onhide) detected", frame, frame:GetName(), script);
+        --@end-debug@
+
+        if not DidSnitched then
+            local baddon, proof = LNR_PRIVATE:GetBAddon(2);
+            -- try to identify and report the add-on doing this selfish and stupid thing
+            if baddon then
+                DidSnitched = true;
+
+                local alertMessage = "|cFFFF0000WARNING:|r Apparently the add-on |cffee2222" .. baddon:upper() .. "|r is using |cFFFFAA55:SetScript()|r instead of |cFF00DD00:HookScript()|r on Blizzard's nameplates. This will cause many issues with other add-ons relying on nameplates. You should contact |cffee2222" .. baddon:upper() .. "|r's author about this. Offending call:";
+
+                LNR_PRIVATE:Fire("LNR_ERROR_SETSCRIPT_ALERT", baddon, proof, alertMessage);
+            end
+        end
+    end
+
+    local function IsPlate (frame)
+
+        if NotPlateCache[frame] then
+            --@debug@
+            Debug(INFO, 'not plate cache used');
+            --@end-debug@
+            return false
+        end
+
+        frameName = frame:GetName();
+        if frameName and frameName:sub(1,9) == 'NamePlate' then
+            return true;
+        end
+
+        NotPlateCache[frame] = true;
+
+        return false;
+    end
+
+    local function RegisterNewPlates (worldChild, ...)
+
+        if not worldChild then
+            --@debug@
+            Debug(INFO, 'No more children', temp, 'frames checked');
+            --@end-debug@
+            return;
+        end
+
+        --@debug@
+        temp = temp + 1;
+        --@end-debug@
+
+        if not PlateRegistry_per_frame[worldChild] and worldChild:IsShown() and IsPlate(worldChild) then
+            --@debug@
+            Debug(INFO, 'New plate frame (fname: ', worldChild:GetName() , ')');
+            --@end-debug@
+
+            -- keep a reference
+            PlateRegistry_per_frame[worldChild] = {};
+
+            --HealthBar = Frame_Children_Cache[ Frame_Children_Cache[worldChild][1] ][1];
+            HealthBar = Plate_Parts_Cache[worldChild].statusBar;
+            HealthBar.LNR_ParentPlate = worldChild;
+
+            -- hooks show and hide event
+            worldChild:HookScript("OnShow", PlateOnShow);
+            worldChild:HookScript("OnHide", PlateOnHide);
+            hooksecurefunc(worldChild, 'SetScript', SetScriptAlert);
+            HealthBar:HookScript("OnMinMaxChanged", PlateOnChange);
+            hooksecurefunc(HealthBar, 'SetParent', SetParentAlert); -- just to detect baddons
+
+            -- since we're here it means the frame is already shown
+            PlateOnShow(worldChild);
+
+
+
+            --@debug@
+        elseif PlateRegistry_per_frame[worldChild] then
+
+            assert(not ActivePlates_per_frame[worldChild] == not worldChild:IsShown(), 'OnHide/Show hook failure: ' .. tostring(ActivePlates_per_frame[worldChild]).." != "..tostring(worldChild:IsShown()));
+            
+            --@end-debug@
+        end
+
+        RegisterNewPlates(...);
+
+    end
+
+    function LNR_PRIVATE:LookForNewPlates()
+        temp =  WorldFrame:GetNumChildren();
+
+        if temp ~= WorldFrameChildrenNumber then
+
+            --@debug@
+            Debug(INFO, "WorldFrame gave birth to", temp - WorldFrameChildrenNumber);
+            --@end-debug@
+
+            WorldFrameChildrenNumber = temp;
+
+            --@debug@
+            temp = 0; -- used to count the number of checked frame for profiling purposes
+            --@end-debug@
+            RegisterNewPlates(WorldFrame:GetChildren());
+        end
+    end
+
+
+    function LNR_PRIVATE:CheckPlatesForTarget() -- run by a timer, only active when a target exists
+        local unitName = "";
+
+        if CurrentTarget or TargetCheckScannedAll or not HasTarget then return; end
+
+        --@debug@
+        Debug(INFO, 'looking for targeted plate');
+        --@end-debug@
+
+        for frame, data in pairs(ActivePlates_per_frame) do
+            if not data.GUID and self:IsPlateTargeted(frame) then
+
+                data.GUID = UnitGUID('target');
+                unitName = UnitName('target');
+
+                if unitName == data.name and self:ValidateCache(frame, 'name') == 0 then
+                    self:AddGUIDToCache(data);
+                    self:Fire("LNR_ON_GUID_FOUND", frame, data.GUID, 'target');
+                    --@debug@
+                    Debug(INFO, 'Guid found for', data.name, 'target');
+                    --@end-debug@
+                end
+
+                break; -- there can be only one target
+            end
+        end
+
+        TargetCheckScannedAll = true; -- no need to scan continuously if no new name plate are shown
+    end
+
+    function LNR_PRIVATE:QuitPlateTracking()
+        twipe(NotPlateCache); NotPlateCache = nil;
+        IsPlate = nil;
+        RegisterNewPlates = nil;
+
+        LNR_PRIVATE.QuitPlateTracking = nil;
+    end
+
+end -- }}}
+
+
+-- public methods: :GetPlateName(), :GetPlateReaction(), :GetPlateType(), :GetPlateGUID(), :GetPlateByGUID(), :EachPlateByName() {{{
+function LNR_PUBLIC:GetPlateName(plateFrame)
+
+    --@debug@
+    if ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].name and ActivePlates_per_frame[plateFrame].name ~= LNR_PRIVATE.RawGetPlateName(plateFrame) then
+        error('GN: Nameplate inconsistency detected: rpn:' .. tostring(ActivePlates_per_frame[plateFrame].name) .. ' rawpn:' .. tostring(LNR_PRIVATE.RawGetPlateName(plateFrame)));
+    end
+    --@end-debug@
+
+    return ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].name or nil;
+end
+
+function LNR_PUBLIC:GetPlateReaction (plateFrame)
+    return ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].reaction or nil;
+end
+
+function LNR_PUBLIC:GetPlateType (plateFrame)
+    return ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].type or nil;
+end
+
+function LNR_PUBLIC:GetPlateGUID (plateFrame)
+    return ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].GUID or nil;
+end
+
+function LNR_PUBLIC:GetPlateByGUID (GUID)
+
+    if GUID then
+        for frame, data in pairs(ActivePlates_per_frame) do
+            if data.GUID == GUID and LNR_PRIVATE:ValidateCache(frame, 'GUID') == 0 then
+                return frame, data;
+            end
+        end
+    end
+
+    return nil;
+
+end
+LNR_PRIVATE.GetPlateByGUID = LNR_PUBLIC.GetPlateByGUID;
+
+do
+    local CurrentPlate;
+    local Data, Name;
+    local next = _G.next;
+    local function iter ()
+        CurrentPlate, Data = next (ActivePlates_per_frame, CurrentPlate);
+
+        if not CurrentPlate then
+            return nil;
+        end
+
+        if Name == Data.name and LNR_PRIVATE:ValidateCache(CurrentPlate, 'name') == 0 then -- ValidateCache() will fail only rarely (upon mind controll events) so it's not a big deal if we miss a few frames then... (to keep in mind)
+            return CurrentPlate, Data;
+        else
+            return iter();
+        end
+
+    end
+    function LNR_PUBLIC:EachPlateByName (name)
+        CurrentPlate = nil;
+        Name = name;
+
+        return iter;
+    end
+end -- }}}
+
+
+-- Blizzard event management
+function LNR_PRIVATE.OnEvent(frame, event, ...)
+    LNR_PRIVATE[event](LNR_PRIVATE, event, ...);
+end
+
+LNR_PRIVATE.EventFrame = LNR_PRIVATE.EventFrame or CreateFrame("Frame");
+LNR_PRIVATE.EventFrame:Hide();
+LNR_PRIVATE.EventFrame:SetScript("OnEvent", LNR_PRIVATE.OnEvent);
+
+
+-- Enable or Disable depending on our main callback usage
+function LNR_PRIVATE.callbacks:OnUsed(target, eventname)
+    --Debug(INFO, "OnUsed", eventname);
+    if eventname == "LNR_ON_NEW_PLATE" then
+        LNR_PRIVATE:Enable()
+    end
+end
+
+function LNR_PRIVATE.callbacks:OnUnused(target, eventname)
+    --Debug(INFO2, "OnUnused", eventname);
+    if eventname == "LNR_ON_NEW_PLATE" then
+        LNR_PRIVATE:Disable()
+    end
+end
+
+
+-- Manage embedding
+LNR_PRIVATE.mixinTargets = LNR_PRIVATE.mixinTargets or {};
+
+local Mixins = {"GetPlateName", "GetPlateReaction", "GetPlateType", "GetPlateGUID", "GetPlateByGUID", "EachPlateByName", "LNR_RegisterCallback", "LNR_UnregisterCallback", "LNR_UnregisterAllCallbacks" };
+
+function LNR_PUBLIC:Embed(target)
+
+    for _,name in pairs(Mixins) do
+        target[name] = LNR_PUBLIC[name];
+    end
+
+    LNR_PRIVATE.mixinTargets[target] = true;
+
+end
+
+for target,_ in pairs(LNR_PRIVATE.mixinTargets) do
+    LNR_PUBLIC:Embed(target);
+end
+
+
+function LNR_PRIVATE:Enable() -- {{{
+    -- if we try to enable ourself while in combat blizzard might destroy the
+    -- library with a SCRIPT_RAN_TO_LONG Lua exception...
+    if InCombatLockdown() then
+        Debug(WARNING, ":Enable(), InCombatLockdown, will retry later...");
+        self.delayedEnable = self:ScheduleTimer("Enable", 2);
+        return
+    end
+
+    LNR_ENABLED = true;
+    Debug(INFO, "Enable", debugstack(1,2,0));
+
+    self.EventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+    self.EventFrame:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
+
+    self.PlateCheckTimer = self:ScheduleRepeatingTimer("LookForNewPlates", 0.1);
+
+    --@debug@
+    self.DebugTestsTimer = self:ScheduleRepeatingTimer("DebugTests", 1);
+    --@end-debug@
+    self.CheckHookSanityTimer = self:ScheduleRepeatingTimer("CheckHookSanity", 10);
+
+
+    -- if we were just temporarilly disabled then our status is wrong (plate
+    -- migt have been shown and hidden and thus recycled), set it right.
+    --
+    -- we need to do several passes because we need to make things happen as they
+    -- would have in reality else inconsistency may happen in library's users' code...
+    -- 1stly: bust ghosts frame
+    -- 2ndly: update those still on screen
+    -- 3rdly: show which are not
+    --
+
+    for PlateFrame, data in pairs (PlateRegistry_per_frame) do
+
+        -- update our cache so that the correct info about each plate is sent through our callbacks.
+        self:UpdateCache(PlateFrame);
+
+        -- plate is currently hidden
+        if not PlateFrame:IsShown() then
+            --  but thought as shown
+            if ActivePlates_per_frame[PlateFrame] then
+                PlateOnHide(PlateFrame);
+            end
+        end
+    end
+
+    for PlateFrame, data in pairs (PlateRegistry_per_frame) do
+
+        -- plate is currently shown
+        if PlateFrame:IsShown() then
+            -- it's still on screen, it might have changed though...
+            if ActivePlates_per_frame[PlateFrame] then
+                PlateOnChange(PlateFrame);
+            end
+        end
+    end
+
+    for PlateFrame, data in pairs (PlateRegistry_per_frame) do
+
+        -- plate is currently shown
+        if PlateFrame:IsShown() then
+            -- but thought as hidden
+            if not ActivePlates_per_frame[PlateFrame] then
+                PlateOnShow(PlateFrame);
+            end
+        end
+    end
+
+
+    local success, errorm = pcall(self.LookForNewPlates, self); -- make sure we do it once as soon as possible to hook things first in order to detect baddons...
+
+    if not success and not errorm:find("CFCache") then
+        Debug(WARNING, errorm);
+    end
+
+    self:PLAYER_TARGET_CHANGED(); -- a little kick in the butt to force GUID ID
+
+end -- }}}
+
+
+function LNR_PRIVATE:Disable() -- {{{
+    Debug(INFO2, "Disable", debugstack(1,2,0));
+    self:CancelTimer(self.PlateCheckTimer);
+    self:CancelTimer(self.TargetCheckTimer); self.TargetCheckTimer = false;
+    --@debug@
+    self:CancelTimer(self.DebugTestsTimer);
+    twipe(callbacks_consisistency_check);
+    --@end-debug@
+    self:CancelTimer(self.CheckHookSanityTimer);
+    if self.delayedEnable then
+        self:CancelTimer(self.delayedEnable);
+    end
+
+    self.EventFrame:UnregisterAllEvents();
+
+    LNR_ENABLED = false;
+end -- }}}
+
+
+-- Quit the library properly and definitely destroying all private variables and functions to ensure a clean upgrade.
+-- This is also called on catastrophic failure (incompatibility with WoW or other add-ons)
+function LNR_PUBLIC:Quit()
+    Debug(WARNING, "Quit called", debugstack(1,2,0));
+
+    LNR_PRIVATE:Disable();
+
+    -- Fire "LNR_ON_RECYCLE_PLATE" for all nameplate (all our hooks are invalid)
+    for frame, data in pairs(PlateRegistry_per_frame) do
+
+        -- play it safe if this version is bugged we want the upgraded one to behave
+        if ActivePlates_per_frame[frame] or frame:IsShown() then
+            LNR_PRIVATE:Fire("LNR_ON_RECYCLE_PLATE", frame, data);
+        end
+        
+    end
+
+    -- clear Blizzard Event handler
+    LNR_PRIVATE.EventFrame:SetScript("OnEvent", nil);
+
+    -- destroy local caches
+    twipe(Frame_Children_Cache);  Frame_Children_Cache = nil;
+    twipe(Frame_Regions_Cache);   Frame_Regions_Cache  = nil;
+    twipe(Plate_Parts_Cache);     Plate_Parts_Cache    = nil;
+
+    LNR_PRIVATE:GUIDCacheQuit(); -- this one could be kept but it's simpler to destroy it.
+    LNR_PRIVATE:QuitPlateTracking();
+
+
+    -- destroy private work state
+    twipe(PlateRegistry_per_frame);    PlateRegistry_per_frame = nil;
+    twipe(ActivePlates_per_frame);     ActivePlates_per_frame  = {}; -- so public method wont crash
+    CurrentTarget             = nil;
+    HasTarget                 = nil;
+    TargetCheckScannedAll     = nil;
+
+    --@debug@
+    callbacks_consisistency_check = nil;    
+    --@end-debug@
+
+
+    -- clear all local methods
+
+    Debug = nil;
+    LNR_PUBLIC.Quit = function()end; -- if a previous version of the library crashes, this might be called again when upgrading
+    LNR_PRIVATE.Enable = LNR_PUBLIC.Quit;
+    LNR_PRIVATE.Disable = LNR_PUBLIC.Quit;
+
+    return LNR_PRIVATE; -- return private stuff that can be useful
+
+end
+LNR_PRIVATE.Quit = LNR_PUBLIC.Quit;
+
 
 
