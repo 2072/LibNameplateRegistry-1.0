@@ -23,7 +23,7 @@
 
 
 
---========= NAMING Convention ==========
+--========= coding NAMING Convention ==========
 --      VARIABLES AND FUNCTIONS (upvalues excluded)
 -- Constants                      == NAME_WORD2 (full upper-case)
 -- locals to closures or members  == NameWord2
@@ -34,18 +34,6 @@
 --  locals                        == name_word2
 --  members                       == Name_Word2
 
-
-
--- ======== Main callbacks: ========
--- LNR_ON_NEW_PLATE, LNR_ON_RECYCLE_PLATE, LNR_ON_GUID_FOUND
---
--- ======== Diagnostic callbacks: ========
--- LNR_DEBUG, LNR_ERROR_FATAL_INCOMPATIBILITY, LNR_ERROR_GUID_ID_HAMPERED, LNR_ERROR_SETPARENT_ALERT, LNR_ERROR_SETSCRIPT_ALERT
---
--- ======== Public API: ========
---
--- :GetPlateName(plateFrame), :GetPlateReaction(plateFrame), :GetPlateType(plateFrame),
--- :GetPlateGUID(plateFrame), :GetPlateByGUID(GUID), :EachPlateByName()
 --
 -- TODO: Luadoc
 -- - Add args error checking on public API (at least in debug mode?)
@@ -423,7 +411,7 @@ end
 -- }}}
 
 
--- Diagnostic related methods {{{
+-- Diagnostics related methods {{{
 
 function LNR_Private:CheckHookSanity()
 
@@ -521,7 +509,6 @@ end
 -- }}}
 
 
-
 -- - plate hooks methods :  PlateOnShow, PlateOnHide, PlateOnChange {{{
 
 
@@ -565,7 +552,7 @@ do
         ActivePlates_per_frame[PlateFrame] = PlateData;
 
         if CurrentTarget == PlateFrame then
-            CurrentTarget = false; -- it can't be true --> recycling occured obviously
+            CurrentTarget = false; -- it can't be true --> recycling occurred obviously
         end
         TargetCheckScannedAll = false;
 
@@ -574,18 +561,6 @@ do
         PlateData.reaction, PlateData.type = LNR_Private.RawGetPlateType(PlateFrame);
         PlateData.GUID = LNR_Private:GetGUIDFromCache(PlateFrame);
 
-        --@debug@
-        --if PlateData.GUID then
-        --Debug(INFO, 'GUID was set during onshow for ', PlateData.name);
-        --HHTD:Hickup(10);
-        --end
-        --@end-debug@
-
-        --- Fires when a plate appears
-        -- **Notes:** Do not modify the plateData table as the library uses it internaly
-        -- @name //Callback //"LNR_ON_NEW_PLATE"
-        -- @param PlateFrame The nameplate which just appeared
-        -- @param PlateData table containing the following fields: 'name', 'reaction', 'type' and 'GUID' (if known)
         LNR_Private:Fire("LNR_ON_NEW_PLATE", PlateFrame, PlateData);
 
         --@debug@
@@ -605,7 +580,7 @@ do
         -- PlateFrame = healthBar.LNR_ParentPlate;
 
         if not ActivePlates_per_frame[PlateFrame] then
-            LNR_Private:FatalIncompatibilityError('HOOK: '..'OnShow missed');
+            LNR_Private:FatalIncompatibilityError('HOOK: OnShow missed');
             return;
         end
 
@@ -668,7 +643,6 @@ do
 
     end
 end -- }}}
-
 
 -- Event handlers : PLAYER_TARGET_CHANGED, UPDATE_MOUSEOVER_UNIT {{{
 
@@ -927,11 +901,14 @@ end -- }}}
 
 -- public methods: :GetPlateName(), :GetPlateReaction(), :GetPlateType(), :GetPlateGUID(), :GetPlateByGUID(), :EachPlateByName() {{{
 
---- **LibNameplateRegistry-1.0 public API***
--- Here is a complete little add-on as an example, it just displays nameplates'
--- information as they become available.
---
---
+--- ==LibNameplateRegistry-1.0 public API documentation
+-- \\
+-- Check the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks' page]] if you want details about those.
+-- \\
+-- Here is a fully working little add-on as an example displaying nameplates' information as they become available.\\
+-- \\
+-- //For a more advanced usage example you can take a look at the [[http://www.wowace.com/addons/healers-have-to-die/files/|latest version of Healers Have To Die]]//
+-- \\
 -- @usage
 -- local ADDON_NAME, T = ...;
 -- 
@@ -1070,6 +1047,10 @@ do
     end
 
     --- Returns an iterator to iterate through all nameplates sharing an identical name
+    -- Used to iterate through nameplates using their names, since nameplates
+    -- are not necessary unique it's best to always use this method to get a
+    -- nameplate's frame through it's name.
+    --
     -- @name //addon//:EachPlateByName
     -- @param name The name you want to iterate with
     -- @usage
@@ -1086,7 +1067,7 @@ do
 end -- }}}
 
 --- Registers a LibNameplateRegistry callback
--- It's a simple wrapper to CallbackHandler-1.0's _RegisterCallback() method. 
+-- It's simply wrapping CallbackHandler-1.0's RegisterCallback() method.
 --
 -- @name //addon//:LNR_RegisterCallback
 -- @paramsig eventname [, method] [, extraArg]
@@ -1097,13 +1078,15 @@ function LNR_Public:LNR_RegisterCallback (eventname, method, ...)
     LNR_Private.RegisterCallback(self, eventname, method, ...);
 end
 
---- Un-registers a LibNameplateRegistry callback (see CallbackHandler-1.0 documentation)
+--- Unregisters a LibNameplateRegistry callback (see CallbackHandler-1.0 documentation)
+-- @name //addon//:LNR_UnregisterCallback
 -- @param eventname the event to stop tracking
 function LNR_Public:LNR_UnregisterCallback (eventname)
     LNR_Private.UnregisterCallback(self, eventname);
 end
 
---- Un-registers all LibNameplateRegistry callbacks
+--- Unregisters all LibNameplateRegistry callbacks
+-- @name //addon//:LNR_UnregisterAllCallbacks
 function LNR_Public:LNR_UnregisterAllCallbacks ()
     LNR_Private.UnregisterAllCallbacks(self);
 end
