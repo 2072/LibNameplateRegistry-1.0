@@ -19,6 +19,8 @@
     You should have received a copy of the GNU Lesser Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+This file was last updated on @file-date-iso@ by @file-author@
+
 --]]
 
 
@@ -444,20 +446,13 @@ function LNR_Private:CheckHookSanity()
     end
 
 end
-function LNR_Private:GetBAddon (StackLevel) -- to test
+function LNR_Private:GetBAddon (StackLevel)
     local stack = debugstack(1 + StackLevel,2,0);
     if not stack:lower():find("\\libs\\")
         and not stack:find("[/\\]CallbackHandler")
         and not stack:find("[/\\]AceTimer")
         and not stack:find("[/\\]AceHook")
         and not stack:find("[/\\]AceEvent") then
-
-        --[[
-        if stack:find("[/\\]Healers-Have-To-Die") then -- XXX
-            Debug(ERROR, "GetBAddon failed!");
-            return false;
-        end
-        --]]
 
         return stack:match("[/\\]AddOns[/\\]([^/\\]+)[/\\]"), stack;
     else
@@ -471,7 +466,6 @@ do
     local ShownPlateCount = 0;
     local DiffColorsCount = 0;
     function LNR_Private:DebugTests()
-        --if not HHTD.db.global.Debug then return end;
 
         -- check displayed plates
         local count = 0; local names = {};
@@ -515,9 +509,9 @@ end
 local PlateOnShow, PlateOnHide, PlateOnChange; -- these functions cannot be upgraded
 do 
     local PlateFrame, PlateData, PlateName;
-        --@debug@
+    --@debug@
     local testCase1 = false;
-        --@end-debug@
+    --@end-debug@
 
     function PlateOnShow (PlateFrame)
         --Debug(INFO, "PlateOnShow", healthBar.LNR_ParentPlate:GetName());
@@ -576,8 +570,6 @@ do
         if not LNR_ENABLED then
             return;
         end
-
-        -- PlateFrame = healthBar.LNR_ParentPlate;
 
         if not ActivePlates_per_frame[PlateFrame] then
             LNR_Private:FatalIncompatibilityError('HOOK: OnShow missed');
@@ -658,7 +650,7 @@ function LNR_Private:PLAYER_TARGET_CHANGED()
             self.TargetCheckTimer = self:ScheduleRepeatingTimer(self.CheckPlatesForTarget, 0.3, self);
         end
     else
-        CurrentTarget = false; -- we don't know anymore
+        CurrentTarget = false; -- we don't know any more
         HasTarget = false;
         self:CancelTimer(self.TargetCheckTimer);
         self.TargetCheckTimer = false;
@@ -902,8 +894,11 @@ end -- }}}
 -- public methods: :GetPlateName(), :GetPlateReaction(), :GetPlateType(), :GetPlateGUID(), :GetPlateByGUID(), :EachPlateByName() {{{
 
 --- ==LibNameplateRegistry-1.0 public API documentation\\\\
--- Check the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks page]] if you want details about those.\\\\
+-- Check the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks' page]] if you want details about those.\\\\
+--
 -- Here is a fully working little add-on as an example displaying nameplates' information as they become available.\\
+-- You can download a ready to go archive of this example add-on [[www.j2072.teaser-hosting.com/dropbox/example.rar|here]]\\\\
+--
 -- For a more advanced usage example you can take a look at the [[http://www.wowace.com/addons/healers-have-to-die/files/|latest version of Healers Have To Die]].\\
 --
 -- @usage
@@ -1044,16 +1039,21 @@ do
     end
 
     --- Returns an iterator to iterate through all nameplates sharing an identical name\\
+    --
     -- Used to iterate through nameplates using their names.\\\\
     -- Since nameplates are not necessary unique it's best to always use this
     -- method to get a nameplate's frame through it's name.
     --
     -- @name //addon//:EachPlateByName
+    --
     -- @param name The name you want to iterate with
+    --
     -- @usage
+    --
     -- for frame, plateData in self:EachPlateByName(unitName) do
     -- -- code
     -- end
+    --
     -- @return iterator 
     function LNR_Public:EachPlateByName (name)
         CurrentPlate = nil;
@@ -1067,19 +1067,24 @@ end -- }}}
 -- It's simply wrapping CallbackHandler-1.0's RegisterCallback() method.
 --
 -- @name //addon//:LNR_RegisterCallback
--- @paramsig eventname [, method] [, extraArg]
--- @param eventname one of "LNR_ON_NEW_PLATE", "LNR_ON_RECYCLE_PLATE", "LNR_ON_GUID_FOUND", "LNR_DEBUG", "LNR_ERROR_FATAL_INCOMPATIBILITY", "LNR_ERROR_GUID_ID_HAMPERED", "LNR_ERROR_SETPARENT_ALERT", "LNR_ERROR_SETSCRIPT_ALERT"
--- @param method (optional) The method to call when the event fires, if ommitted, addon:eventname is used
+--
+-- @paramsig callbackName [, method] [, extraArg]
+--
+-- @param callbackName name of a callback (see the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks' page]])
+--
+-- @param method (optional) The method to call when the callback fires, if ommitted, addon:eventname is used
+--
 -- @param ... (optional) An optional extra argument that is past to your handler as first argument (after 'self')
-function LNR_Public:LNR_RegisterCallback (eventname, method, ...)
-    LNR_Private.RegisterCallback(self, eventname, method, ...);
+
+function LNR_Public:LNR_RegisterCallback (callbackName, method, ...)
+    LNR_Private.RegisterCallback(self, callbackName, method, ...);
 end
 
 --- Unregisters a LibNameplateRegistry callback (see CallbackHandler-1.0 documentation)
 -- @name //addon//:LNR_UnregisterCallback
--- @param eventname the event to stop tracking
-function LNR_Public:LNR_UnregisterCallback (eventname)
-    LNR_Private.UnregisterCallback(self, eventname);
+-- @param callbackName the callback to stop tracking
+function LNR_Public:LNR_UnregisterCallback (callbackName)
+    LNR_Private.UnregisterCallback(self, callbackName);
 end
 
 --- Unregisters all LibNameplateRegistry callbacks
@@ -1148,15 +1153,14 @@ function LNR_Private:Enable() -- {{{
     self.CheckHookSanityTimer = self:ScheduleRepeatingTimer("CheckHookSanity", 10);
 
 
-    -- if we were just temporarilly disabled then our status is wrong (plate
-    -- migt have been shown and hidden and thus recycled), set it right.
+    -- if we were just temporarily disabled then our status is wrong (plate
+    -- might have been shown and hidden and thus recycled), we must set things right.
     --
-    -- we need to do several passes because we need to make things happen as they
+    -- We need to do several passes because we need to make things happen as they
     -- would have in reality else inconsistency may happen in library's users' code...
     -- 1stly: bust ghosts frame
     -- 2ndly: update those still on screen
     -- 3rdly: show which are not
-    --
 
     for PlateFrame, data in pairs (PlateRegistry_per_frame) do
 
