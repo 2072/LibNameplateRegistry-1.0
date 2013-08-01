@@ -79,6 +79,7 @@ LNR_Private = LNR_Private or {};
 local LNR_Public, oldMinor = LibStub:NewLibrary(MAJOR, MINOR)
 if not LNR_Public then return end -- no upgrade required
 
+local LNR_ENABLED = false; -- must stay local to the file, it's used to disable hooked Scripts which cannot be removed
 
 LibStub("AceTimer-3.0"):Embed(LNR_Private); -- adds: :CancelAllTimers(), :CancelTimer(), :ScheduleRepeatingTimer(), :ScheduleTimer(), :TimeLeft();
 LNR_Private.callbacks = LNR_Private.callbacks or LibStub("CallbackHandler-1.0"):New(LNR_Private);
@@ -104,28 +105,14 @@ local function Debug(level, ...)
     LNR_Private:Fire("LNR_DEBUG", level, MINOR, ...);
 end
 
-function LNR_Private:FatalIncompatibilityError(icompatibilityType)
-    LNR_ENABLED = false; -- will prevent hooks from hooking
 
-    -- do not send the message right away because we don't know what's happening. (we might be inside a metatable's callback for all we know...)
-    self:ScheduleTimer(function() 
-        LNR_Private:Fire("LNR_ERROR_FATAL_INCOMPATIBILITY", icompatibilityType);
-        self:Quit();
-        error(MAJOR..MINOR..' has died due to a serious incompatibility issue: ' .. icompatibilityType);
-    end, 0.01);
-
-end
 
 --}}}
 
 -- Lua and Blizzard upvalues {{{
 local _G                    = _G;
-local GetTime               = _G.GetTime;
-local assert                = _G.assert;
 local pairs                 = _G.pairs;
-local ipairs                = _G.ipairs;
 local select                = _G.select;
-local unpack                = _G.unpack;
 local setmetatable          = _G.setmetatable;
 local twipe                 = _G.table.wipe;
 local GetMouseFocus         = _G.GetMouseFocus;
@@ -135,7 +122,12 @@ local UnitName              = _G.UnitName;
 local InCombatLockdown      = _G.InCombatLockdown;
 
 local WorldFrame            = _G.WorldFrame;
+
+--@debug@
 local tostring              = _G.tostring;
+local assert                = _G.assert;
+local unpack                = _G.unpack;
+--@end-debug@
 -- }}}
 
 -- CONSTANTS and library local variables {{{
@@ -147,7 +139,6 @@ local WARNING   = 2;
 local INFO      = 3;
 local INFO2     = 4;
 
-local LNR_ENABLED = false; -- must stay local to the file, it's used to disable hooked Scripts which cannot be removed
 
 
 -- State variable that we keep local, when upgrading we restart from scratch
@@ -897,7 +888,7 @@ end -- }}}
 -- Check the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks' page]] if you want details about those.\\\\
 --
 -- Here is a fully working little add-on as an example displaying nameplates' information as they become available.\\
--- You can download a ready to go archive of this example add-on [[www.j2072.teaser-hosting.com/dropbox/example.rar|here]]\\\\
+-- You can download a ready to go archive of this example add-on [[http://www.j2072.teaser-hosting.com/dropbox/example.rar|here]]\\\\
 --
 -- For a more advanced usage example you can take a look at the [[http://www.wowace.com/addons/healers-have-to-die/files/|latest version of Healers Have To Die]].\\
 --
@@ -1287,6 +1278,18 @@ function LNR_Public:Quit()
 end
 LNR_Private.Quit = LNR_Public.Quit;
 
+
+function LNR_Private:FatalIncompatibilityError(icompatibilityType)
+    LNR_ENABLED = false; -- will prevent hooks from hooking
+
+    -- do not send the message right away because we don't know what's happening. (we might be inside a metatable's callback for all we know...)
+    self:ScheduleTimer(function() 
+        LNR_Private:Fire("LNR_ERROR_FATAL_INCOMPATIBILITY", icompatibilityType);
+        self:Quit();
+        error(MAJOR..MINOR..' has died due to a serious incompatibility issue: ' .. icompatibilityType);
+    end, 0.01);
+
+end
 
 
 -- upgrade our mixins in all targets
