@@ -1,0 +1,18 @@
+## Interface: 50300
+## X-Max-Interface: 50300
+## X-Min-Interface: 40200
+
+## Title: example
+
+## Notes: an example mod for LibNameplateRegistry-1.0
+
+## Author: John Wellesz
+## Version: 1
+
+## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibNameplateRegistry-1.0
+
+
+embeds.xml
+
+Core.lua
+
