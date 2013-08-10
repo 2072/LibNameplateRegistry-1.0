@@ -66,8 +66,12 @@ reused to display other units.
 
 *Fires when a GUID is successfully linked to a nameplate*
 
-LibNameplateRegistry has to resorts to tricks to do this. For now it just uses
-two:
+**NOTE:** This callback will *not fire* if the GUID has been previously cached
+(if plateData.GUID is non-nil when LNR_ON_NEW_PLATE fires).
+
+
+LibNameplateRegistry has to resort to a few tricks to link GUID to nameplates.
+For now it just uses two:
 
 - Nameplate **mouseover highlighting**: nameplates highlight slightly when you mouseover them
 - Nameplate **targeting alpha change**: targetting a nameplate dims all the other nameplates
@@ -77,7 +81,7 @@ link nameplates to unit GUIDs.
 
 When the unit is a player character, its GUID is cached, when the unit is an
 NPC the GUID is forgotten as soon as LNR_ON_RECYCLE_PLATE fires since an NPC's
-GUID is not constant. 
+GUID is not constant.
 
 **Args:**
 
@@ -85,6 +89,21 @@ GUID is not constant.
 - *plateFrame*: The root frame of the nameplate whose GUID was found
 - *GUID*: the GUID that was discovered
 - *methodUsed*: either 'mouseover' or 'target'
+
+* * * * * * * *
+
+### LNR_ON_TARGET_PLATE_ON_SCREEN
+
+*Fires whenever a targeted unit's nameplate becomes visible or when a currently
+displayed nameplate is targeted*
+
+This is the only reliable way to know if a nameplate belongs to the player's current target.
+
+**Args:**
+
+- *callbackName*: The name of the callback
+- *plateFrame*: The root frame of the nameplate
+- *plateData*: The up to date data associated to the nameplate (see the plateData table details above)
 
 * * * * * * * *
 

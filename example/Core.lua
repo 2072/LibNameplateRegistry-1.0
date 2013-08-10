@@ -32,6 +32,9 @@ T.Example = LibStub("AceAddon-3.0"):NewAddon("Example", "LibNameplateRegistry-1.
 T.Example2 = {};
 LibStub("LibNameplateRegistry-1.0"):Embed(T.Example2); -- embedding is optional of course but way more convenient
 
+local R = "|cFFFF0000";
+local G = "|cFF00FF00";
+local W = "|r";
 
 local Example = T.Example;
 
@@ -40,6 +43,7 @@ function Example:OnEnable()
     self:LNR_RegisterCallback("LNR_ON_NEW_PLATE"); -- registering this event will enable the library else it'll remain idle
     self:LNR_RegisterCallback("LNR_ON_RECYCLE_PLATE");
     self:LNR_RegisterCallback("LNR_ON_GUID_FOUND");
+    self:LNR_RegisterCallback("LNR_ON_TARGET_PLATE_ON_SCREEN");
     self:LNR_RegisterCallback("LNR_ERROR_FATAL_INCOMPATIBILITY");
 end
 
@@ -49,12 +53,14 @@ function Example:OnDisable()
     self:LNR_UnregisterAllCallbacks();
 end
 
-
 function Example:LNR_ON_NEW_PLATE(eventname, plateFrame, plateData)
     print(ADDON_NAME, ":", plateData.name, "'s nameplate appeared!");
-    print(ADDON_NAME, ":", "It's a", plateData.type, "and", plateData.reaction, plateData.GUID and ("we know its GUID: " .. plateData.GUID) or "GUID not yet known");
+    print(ADDON_NAME, ":", "It's a", R, plateData.type, W, "and", R, plateData.reaction, W, plateData.GUID and ("we know its GUID: " .. plateData.GUID) or "GUID not yet known");
 end
 
+function Example:LNR_ON_TARGET_PLATE_ON_SCREEN(eventname, plateFrame, plateData)
+    print(ADDON_NAME, ":", G, plateData.name, R, "is our Target!", W);
+end
 
 function Example:LNR_ON_RECYCLE_PLATE(eventname, plateFrame, plateData)
     print(ADDON_NAME, ":", plateData.name, "'s nameplate disappeared!");
@@ -75,6 +81,4 @@ function Example:LNR_ERROR_FATAL_INCOMPATIBILITY(eventname, icompatibilityType)
     -- you the name of the incompatible add-on so you can inform your users properly
     -- about what's happening instead of just silently "not working".
 end
-
-
 

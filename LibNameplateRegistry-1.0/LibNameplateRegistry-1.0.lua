@@ -46,7 +46,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 2
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 3
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -72,6 +72,10 @@ local LNR_Private; -- holder for all our private workset
 
 if oldMinor and oldMinor < MINOR then
     LNR_Private = LibStub(MAJOR):Quit(); -- ask the older library to destroy itself properly clearing all its local caches.
+    if not LNR_Private.UpgradeHistory then
+        LNR_Private.UpgradeHistory = "";
+    end
+    LNR_Private.UpgradeHistory = LNR_Private.UpgradeHistory .. oldMinor .. "-";
 end
 
 LNR_Private = LNR_Private or {};
@@ -292,13 +296,19 @@ do
 end -- }}}
 
 -- Internal helper private methods {{{
+
+-- This method shall never be made public for it must be used in a particular
+-- way to be reliable. To find if a nameplate is targeted the user needs to use
+-- the callback LNR_ON_TARGET_PLATE_ON_SCREEN
 function LNR_Private:IsPlateTargeted (frame)
     if not HasTarget then
         return false;
     end
 
     if CurrentTarget == frame then -- we already told you
+        --@debug@
         Debug(WARNING, 'CurrentTarget == frame');
+        --@end-debug@
         return true;
     elseif CurrentTarget then -- we know it's not that one
         return false;
@@ -308,9 +318,17 @@ function LNR_Private:IsPlateTargeted (frame)
         return false;
     end
 
-    CurrentTarget = frame:GetAlpha() == 1 and frame or false;
+    if frame:GetAlpha() == 1 then
+        CurrentTarget = frame;
+        --@debug@
+        Debug(WARNING, 'frame:GetAlpha() == 1');
+        --@end-debug@
+        return true;
+    else
+        CurrentTarget = false;
+        return false;
+    end
 
-    return CurrentTarget == frame;
 end
 
 
@@ -634,17 +652,22 @@ function LNR_Private:PLAYER_TARGET_CHANGED()
     Debug(INFO, 'Target Changed');
 
     if UnitExists('target') then
-        CurrentTarget = (self:GetPlateByGUID(UnitGUID('target'))) or false;
         HasTarget = true;
+        -- Have we already cached that unit's GUID?
+        CurrentTarget = (self:GetPlateByGUID(UnitGUID('target'))) or false;
+
+        if CurrentTarget then
+            self:Fire("LNR_ON_TARGET_PLATE_ON_SCREEN", CurrentTarget, ActivePlates_per_frame[CurrentTarget]);
+        end
+
         TargetCheckScannedAll = false;
         if not self.TargetCheckTimer then
-            self.TargetCheckTimer = self:ScheduleRepeatingTimer(self.CheckPlatesForTarget, 0.3, self);
+            self.TargetCheckTimer = self:ScheduleRepeatingTimer(self.CheckPlatesForTarget, 0.1, self);
         end
     else
         CurrentTarget = false; -- we don't know any more
         HasTarget = false;
-        self:CancelTimer(self.TargetCheckTimer);
-        self.TargetCheckTimer = false;
+        self:CancelTimer(self.TargetCheckTimer); self.TargetCheckTimer = false;
     end
 
 end
@@ -840,28 +863,41 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
         end
     end
 
+    local ForceTargetCheck = false;
+    function LNR_Private.SetForceTargetCheck(bool)
+        ForceTargetCheck = bool;
+    end
 
     function LNR_Private:CheckPlatesForTarget() -- run by a timer, only active when a target exists
-        local unitName = "";
+        if CurrentTarget or TargetCheckScannedAll or not HasTarget then
+            return;
+        end
 
-        if CurrentTarget or TargetCheckScannedAll or not HasTarget then return; end
+        local unitName = "";
 
         --@debug@
         Debug(INFO, 'looking for targeted plate');
         --@end-debug@
 
         for frame, data in pairs(ActivePlates_per_frame) do
-            if not data.GUID and self:IsPlateTargeted(frame) then
+            if (not data.GUID or ForceTargetCheck) and self:IsPlateTargeted(frame) then
 
-                data.GUID = UnitGUID('target');
                 unitName = UnitName('target');
 
                 if unitName == data.name and self:ValidateCache(frame, 'name') == 0 then
-                    self:AddGUIDToCache(data);
-                    self:Fire("LNR_ON_GUID_FOUND", frame, data.GUID, 'target');
-                    --@debug@
-                    Debug(INFO, 'Guid found for', data.name, 'target');
-                    --@end-debug@
+
+                    if not data.GUID then
+                        data.GUID = UnitGUID('target');
+                        self:AddGUIDToCache(data);
+                        self:Fire("LNR_ON_GUID_FOUND", frame, data.GUID, 'target');
+                        --@debug@
+                        Debug(INFO, 'Guid found for', data.name, 'target');
+                        --@end-debug@
+                    end
+
+                    self:Fire("LNR_ON_TARGET_PLATE_ON_SCREEN", frame, data);
+                else
+                    CurrentTarget = false; -- IsPlateTargeted got it wrong so let's try again
                 end
 
                 break; -- there can be only one target
@@ -1104,14 +1140,22 @@ LNR_Private.EventFrame:SetScript("OnEvent", LNR_Private.OnEvent);
 function LNR_Private.callbacks:OnUsed(target, eventname)
     --Debug(INFO, "OnUsed", eventname);
     if eventname == "LNR_ON_NEW_PLATE" then
-        LNR_Private:Enable()
+        LNR_Private:Enable();
+    end
+
+    if eventname == "LNR_ON_TARGET_PLATE_ON_SCREEN" then
+        LNR_Private.SetForceTargetCheck(true);
     end
 end
 
 function LNR_Private.callbacks:OnUnused(target, eventname)
     --Debug(INFO2, "OnUnused", eventname);
     if eventname == "LNR_ON_NEW_PLATE" then
-        LNR_Private:Disable()
+        LNR_Private:Disable();
+    end
+
+    if eventname == "LNR_ON_TARGET_PLATE_ON_SCREEN" then
+        LNR_Private.SetForceTargetCheck(false);
     end
 end
 
@@ -1219,6 +1263,10 @@ function LNR_Private:Disable() -- {{{
     LNR_ENABLED = false;
 end -- }}}
 
+-- /dump LibStub("LibNameplateRegistry-1.0"):GetUpgradeHistory()
+function LNR_Public:GetUpgradeHistory()
+    return LNR_Private.UpgradeHistory or false;
+end
 
 -- Quit the library properly and definitely destroying all private variables and functions to ensure a clean upgrade.
 -- This is also called on catastrophic failure (incompatibility with WoW or other add-ons)
