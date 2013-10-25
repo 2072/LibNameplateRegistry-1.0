@@ -41,12 +41,11 @@ This file was last updated on @file-date-iso@ by @file-author@
 -- - Add args error checking on public API (at least in debug mode?)
 -- - Add a method to decommission properly a Blizzard nameplate
 -- - Add a documentation snippet on nameplate modifications
--- - Add a :GetNamePlateRegion() method
 -- - Add a :GetPlateClass() method
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 4
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 5
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -93,7 +92,7 @@ LNR_Private.Fire      = LNR_Private.callbacks.Fire;
 -- Manage embedding
 LNR_Private.mixinTargets = LNR_Private.mixinTargets or {};
 
-local Mixins = {"GetPlateName", "GetPlateReaction", "GetPlateType", "GetPlateGUID", "GetPlateByGUID", "EachPlateByName", "LNR_RegisterCallback", "LNR_UnregisterCallback", "LNR_UnregisterAllCallbacks" };
+local Mixins = {"GetPlateName", "GetPlateReaction", "GetPlateType", "GetPlateGUID", "GetPlateByGUID", "GetPlateRegion", "EachPlateByName", "LNR_RegisterCallback", "LNR_UnregisterCallback", "LNR_UnregisterAllCallbacks" };
 
 function LNR_Public:Embed(target)
 
@@ -233,6 +232,12 @@ function (t, plateFrame)
                 t[regionName] = Frame_Children_Cache[  Frame_Children_Cache[plateFrame][1]  ][1];
             elseif regionName == 'highlight' then
                 t[regionName] = Frame_Regions_Cache[  Frame_Children_Cache[plateFrame][1]  ][3];
+            elseif regionName == 'level' then
+                t[regionName] = Frame_Regions_Cache[  Frame_Children_Cache[plateFrame][1]  ][4];
+            elseif regionName == 'raidIcon' then
+                t[regionName] = Frame_Regions_Cache[  Frame_Children_Cache[plateFrame][1]  ][6];
+            else
+                return false;
             end
             --@debug@
             Debug(INFO, 'cached a new plateFrame part:', regionName);
@@ -926,7 +931,7 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
 end -- }}}
 
 
--- public methods: :GetPlateName(), :GetPlateReaction(), :GetPlateType(), :GetPlateGUID(), :GetPlateByGUID(), :EachPlateByName() {{{
+-- public methods: :GetPlateName(), :GetPlateReaction(), :GetPlateType(), :GetPlateGUID(), :GetPlateByGUID(), :GetPlateRegion(), :EachPlateByName() {{{
 
 --- ==LibNameplateRegistry-1.0 public API documentation\\\\
 -- Check the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks' page]] if you want details about those.\\\\
@@ -996,7 +1001,7 @@ end -- }}}
 -- @name LibNameplateRegistry-1.0.lua
 
 
---- Returns a nameplate's unit's name
+--- Returns a nameplate's unit's name (removing the " (*)" suffix if present)
 -- @name //addon//:GetPlateName
 -- @param plateFrame the platename's root frame
 -- @return The name of the unit as displayed on the nameplate or nil
@@ -1054,6 +1059,35 @@ function LNR_Public:GetPlateByGUID (GUID)
 end
 LNR_Private.GetPlateByGUID = LNR_Public.GetPlateByGUID;
 
+
+--- (WIP current alpha only) Gets a platename's frame specific region using a normalized name.
+--
+-- Use this API to get an easy and direct access to a specific sub-frame of any
+-- nameplate. This is useful if you want to access data for which //addon//
+-- provides no API (yet).
+--
+-- The result is cached for each frame making subsequent identical calls very fast.
+--
+-- The following regions are supported: 'name', 'statusBar', 'highlight', 'level', 'raidIcon'.
+-- If you need to access a specific region which is not supported, please make
+-- a feature request using the ticket system.
+--
+-- @name //addon//:GetPlateRegion
+-- @param plateFrame the platename's root frame
+-- @param InternalRegionNormalizedName a normalized name referring to a specific region
+-- @return region or throws an error if asked an unsupported region's name.
+function LNR_Public:GetPlateRegion (plateFrame, InternalRegionNormalizedName)
+
+    local region = Plate_Parts_Cache[plateFrame][InternalRegionNormalizedName];
+
+    if region == false then
+        error(("Unknown nameplate region: '%s'."):format(tostring(InternalRegionNormalizedName)), 2); -- XXX check stack level
+    end
+
+    return region;
+end
+
+
 do
     local CurrentPlate;
     local Data, Name;
@@ -1065,7 +1099,7 @@ do
             return nil;
         end
 
-        if Name == Data.name and LNR_Private:ValidateCache(CurrentPlate, 'name') == 0 then -- ValidateCache() will fail only rarely (upon mind controll events) so it's not a big deal if we miss a few frames then... (to keep in mind)
+        if Name == Data.name and LNR_Private:ValidateCache(CurrentPlate, 'name') == 0 then -- ValidateCache() will fail only rarely (upon mind control events) so it's not a big deal if we miss a few frames then... (to keep in mind)
             return CurrentPlate, Data;
         else
             return iter();
@@ -1276,7 +1310,7 @@ function LNR_Public:GetUpgradeHistory()
     return LNR_Private.UpgradeHistory or false;
 end
 
--- Quit the library properly and definitely destroying all private variables and functions to ensure a clean upgrade.
+-- Quit the library properly and definitively destroying all private variables and functions to ensure a clean upgrade.
 -- This is also called on catastrophic failure (incompatibility with WoW or other add-ons)
 function LNR_Public:Quit()
 
