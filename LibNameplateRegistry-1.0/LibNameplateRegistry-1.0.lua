@@ -236,6 +236,8 @@ function (t, plateFrame)
                 t[regionName] = Frame_Regions_Cache[  Frame_Children_Cache[plateFrame][1]  ][4];
             elseif regionName == 'raidIcon' then
                 t[regionName] = Frame_Regions_Cache[  Frame_Children_Cache[plateFrame][1]  ][6];
+            elseif regionName == 'eliteIcon' then
+                t[regionName] = Frame_Regions_Cache[  Frame_Children_Cache[plateFrame][1]  ][7];
             else
                 return false;
             end
@@ -1068,7 +1070,7 @@ LNR_Private.GetPlateByGUID = LNR_Public.GetPlateByGUID;
 --
 -- The result is cached for each frame making subsequent identical calls very fast.
 --
--- The following regions are supported: 'name', 'statusBar', 'highlight', 'level', 'raidIcon'.
+-- The following regions are supported: 'name', 'statusBar', 'highlight', 'level', 'raidIcon', 'eliteIcon'.
 -- If you need to access a specific region which is not supported, please make
 -- a feature request using the ticket system.
 --
