@@ -1065,8 +1065,8 @@ LNR_Private.GetPlateByGUID = LNR_Public.GetPlateByGUID;
 --- (WIP current alpha only) Gets a platename's frame specific region using a normalized name.
 --
 -- Use this API to get an easy and direct access to a specific sub-frame of any
--- nameplate. This is useful if you want to access data for which //addon//
--- provides no API (yet).
+-- nameplate. This is useful if you want to access data for which
+-- LibNameplateRegistry provides no API (yet).
 --
 -- The result is cached for each frame making subsequent identical calls very fast.
 --
@@ -1076,14 +1076,14 @@ LNR_Private.GetPlateByGUID = LNR_Public.GetPlateByGUID;
 --
 -- @name //addon//:GetPlateRegion
 -- @param plateFrame the platename's root frame
--- @param InternalRegionNormalizedName a normalized name referring to a specific region
+-- @param internalRegionNormalizedName a normalized name referring to a specific region
 -- @return region or throws an error if asked an unsupported region's name.
-function LNR_Public:GetPlateRegion (plateFrame, InternalRegionNormalizedName)
+function LNR_Public:GetPlateRegion (plateFrame, internalRegionNormalizedName)
 
-    local region = Plate_Parts_Cache[plateFrame][InternalRegionNormalizedName];
+    local region = Plate_Parts_Cache[plateFrame][internalRegionNormalizedName];
 
     if region == false then
-        error(("Unknown nameplate region: '%s'."):format(tostring(InternalRegionNormalizedName)), 2); -- XXX check stack level
+        error(("Unknown nameplate region: '%s'."):format(tostring(internalRegionNormalizedName)), 2);
     end
 
     return region;
