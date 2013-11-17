@@ -11,8 +11,8 @@
 
 ## X-License: GNU Lesser General Public License version 3 (LGPLv3)
 
-## OptionalDeps: Libstub, CallbackHandler-1.0, Ace3
-## X-Embeds: Libstub, CallbackHandler-1.0, AceTimer-3.0
+## OptionalDeps: Libstub, CallbackHandler-1.0
+## X-Embeds: Libstub, CallbackHandler-1.0
 
 ## X-ReleaseDate: "@project-date-iso@"
 ## X-eMail: archarodim@teaser.fr

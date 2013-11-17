@@ -37,7 +37,8 @@ This file was last updated on @file-date-iso@ by @file-author@
 --  members                       == Name_Word2
 
 --
--- TODO: Luadoc
+-- TODO:
+-- - Create a frame underneath the main nameplate and use setscript on it as proposed by Adirelle
 -- - Add args error checking on public API (at least in debug mode?)
 -- - Add a method to decommission properly a Blizzard nameplate
 -- - Add a documentation snippet on nameplate modifications
@@ -50,11 +51,6 @@ local MAJOR, MINOR = "LibNameplateRegistry-1.0", 6
 if not LibStub then
     error(MAJOR .. " requires LibStub");
     return
-end
-
-if not LibStub("AceTimer-3.0") then
-    error(MAJOR .. " requires AceTimer-3.0");
-    return;
 end
 
 if not LibStub("CallbackHandler-1.0") then
@@ -84,7 +80,6 @@ if not LNR_Public then return end -- no upgrade required
 
 local LNR_ENABLED = false; -- must stay local to the file, it's used to disable hooked Scripts which cannot be removed
 
-LibStub("AceTimer-3.0"):Embed(LNR_Private); -- adds: :CancelAllTimers(), :CancelTimer(), :ScheduleRepeatingTimer(), :ScheduleTimer(), :TimeLeft();
 LNR_Private.callbacks = LNR_Private.callbacks or LibStub("CallbackHandler-1.0"):New(LNR_Private);
 LNR_Private.Fire      = LNR_Private.callbacks.Fire;
 
@@ -441,6 +436,7 @@ end
 
 function LNR_Private:CheckHookSanity()
 
+    Debug(INFO, "CheckHookSanity() called");
     if InCombatLockdown() then
         return
     end
@@ -491,6 +487,7 @@ do
     local DiffColorsCount = 0;
     function LNR_Private:DebugTests()
 
+        --Debug(INFO2, 'DebugTests() called');
         -- check displayed plates
         local count = 0; local names = {};
         for frame in pairs(ActivePlates_per_frame) do
@@ -660,7 +657,14 @@ do
     end
 end -- }}}
 
--- Event handlers : PLAYER_TARGET_CHANGED, UPDATE_MOUSEOVER_UNIT {{{
+-- Event handlers : PLAYER_TARGET_CHANGED, UPDATE_MOUSEOVER_UNIT, PLAYER_REGEN_ENABLED {{{
+
+
+function LNR_Private:PLAYER_REGEN_ENABLED()
+    self.EventFrame:UnregisterEvent('PLAYER_REGEN_ENABLED');
+    self:Enable();
+end
+
 
 function LNR_Private:PLAYER_TARGET_CHANGED()
     
@@ -676,13 +680,9 @@ function LNR_Private:PLAYER_TARGET_CHANGED()
         end
 
         TargetCheckScannedAll = false;
-        if not self.TargetCheckTimer then
-            self.TargetCheckTimer = self:ScheduleRepeatingTimer(self.CheckPlatesForTarget, 0.1, self);
-        end
     else
         CurrentTarget = false; -- we don't know any more
         HasTarget = false;
-        self:CancelTimer(self.TargetCheckTimer); self.TargetCheckTimer = false;
     end
 
 end
@@ -734,8 +734,8 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
     local WorldFrame = WorldFrame
     local WorldFrameChildrenNumber = 0;
     local temp = 0;
+    local actualChildren = 0;
     local frameName;
-
     local NotPlateCache = {};
     local DidSnitched = false;
     local HealthBar;
@@ -796,7 +796,7 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
 
         if NotPlateCache[frame] then
             --@debug@
-            Debug(INFO, 'not plate cache used');
+            Debug(INFO, 'not plate cache used:', NotPlateCache[frame]);
             --@end-debug@
             return false
         end
@@ -807,6 +807,10 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
         end
 
         NotPlateCache[frame] = true;
+        --@debug@
+        NotPlateCache[frame] = frameName;
+        --@end-debug@
+        
 
         return false;
     end
@@ -821,7 +825,7 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
         end
 
         --@debug@
-        temp = temp + 1;
+        actualChildren = actualChildren + 1;
         --@end-debug@
 
         if not PlateRegistry_per_frame[worldChild] and IsPlate(worldChild) then
@@ -873,7 +877,7 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
             WorldFrameChildrenNumber = temp;
 
             --@debug@
-            temp = 0; -- used to count the number of checked frame for profiling purposes
+            actualChildren = 0; -- used to count the number of checked frame for profiling purposes
             --@end-debug@
             RegisterNewPlates(WorldFrame:GetChildren());
         end
@@ -1181,6 +1185,51 @@ LNR_Private.EventFrame:Hide();
 LNR_Private.EventFrame:SetScript("OnEvent", LNR_Private.OnEvent);
 
 
+-- Internal timers management -- {{{
+if not LNR_Private.Anim  then
+  LNR_Private.Anim = LNR_Private.EventFrame:CreateAnimationGroup();
+end
+if not LNR_Private.Timer then
+  LNR_Private.Timer = LNR_Private.Anim:CreateAnimation();
+end
+
+LNR_Private.Anim:SetLooping("REPEAT");
+LNR_Private.Timer:SetDuration(0.1);
+
+local TimerDivisor = 0
+LNR_Private.Timer:SetScript('OnFinished', function()
+
+    -- if a major incompatibility has been found
+    if LNR_Private.FatalIncompatibilityDelayedFire then
+        LNR_Private.FatalIncompatibilityDelayedFire();
+        return;
+    end
+
+    -- Check sanity every 100th tick
+    TimerDivisor = TimerDivisor % 101 + 1;
+
+    -- Look for new plates
+    LNR_Private:LookForNewPlates()
+
+    -- Look for target plate
+    if HasTarget then
+        LNR_Private:CheckPlatesForTarget()
+    end
+
+    if TimerDivisor == 100 then
+        LNR_Private:CheckHookSanity()
+    end
+
+    --@debug@
+    if TimerDivisor % 10 == 0 then
+        LNR_Private:DebugTests()
+    end
+    --@end-debug@
+
+end); -- }}}
+
+
+
 -- Enable or Disable depending on our main callback usage
 function LNR_Private.callbacks:OnUsed(target, eventname)
     --Debug(INFO, "OnUsed", eventname);
@@ -1215,23 +1264,20 @@ function LNR_Private:Enable() -- {{{
     -- library with a SCRIPT_RAN_TO_LONG Lua exception...
     if InCombatLockdown() then
         Debug(WARNING, ":Enable(), InCombatLockdown, will retry later...");
-        self.delayedEnable = self:ScheduleTimer("Enable", 2);
+        self.EventFrame:RegisterEvent("PLAYER_REGEN_ENABLED");
+        
         return
     end
 
     LNR_ENABLED = true;
     Debug(INFO, "Enable", debugstack(1,2,0));
 
-    self.EventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
-    self.EventFrame:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
+    self.EventFrame:RegisterEvent("PLAYER_TARGET_CHANGED");
+    self.EventFrame:RegisterEvent("UPDATE_MOUSEOVER_UNIT");
 
-    self.PlateCheckTimer = self:ScheduleRepeatingTimer("LookForNewPlates", 0.1);
-
-    --@debug@
-    self.DebugTestsTimer = self:ScheduleRepeatingTimer("DebugTests", 1);
-    --@end-debug@
-    self.CheckHookSanityTimer = self:ScheduleRepeatingTimer("CheckHookSanity", 10);
-
+    -- Enable timer execution
+    LNR_Private.EventFrame:Show();
+    LNR_Private.Anim:Play();
 
     -- if we were just temporarily disabled then our status is wrong (plate
     -- might have been shown and hidden and thus recycled), we must set things right.
@@ -1292,16 +1338,14 @@ end -- }}}
 
 function LNR_Private:Disable() -- {{{
     Debug(INFO2, "Disable", debugstack(1,2,0));
-    self:CancelTimer(self.PlateCheckTimer);
-    self:CancelTimer(self.TargetCheckTimer); self.TargetCheckTimer = false;
+
+    -- disable timers
+    LNR_Private.Anim:Stop();
+    LNR_Private.EventFrame:Hide();
+
     --@debug@
-    self:CancelTimer(self.DebugTestsTimer);
     twipe(callbacks_consisistency_check);
     --@end-debug@
-    self:CancelTimer(self.CheckHookSanityTimer);
-    if self.delayedEnable then
-        self:CancelTimer(self.delayedEnable);
-    end
 
     self.EventFrame:UnregisterAllEvents();
 
@@ -1337,6 +1381,8 @@ function LNR_Public:Quit()
 
     -- clear Blizzard Event handler
     LNR_Private.EventFrame:SetScript("OnEvent", nil);
+    -- clear timer execution script
+    LNR_Private.Timer:SetScript('OnFinished', nil);
 
     -- destroy local caches
     twipe(Frame_Children_Cache);  Frame_Children_Cache = nil;
@@ -1353,6 +1399,7 @@ function LNR_Public:Quit()
     CurrentTarget             = nil;
     HasTarget                 = nil;
     TargetCheckScannedAll     = nil;
+    TimerDivisor              = nil;
 
     --@debug@
     callbacks_consisistency_check = nil;    
@@ -1376,11 +1423,12 @@ function LNR_Private:FatalIncompatibilityError(icompatibilityType)
     LNR_ENABLED = false; -- will prevent hooks from hooking
 
     -- do not send the message right away because we don't know what's happening. (we might be inside a metatable's callback for all we know...)
-    self:ScheduleTimer(function() 
+    LNR_Private.FatalIncompatibilityDelayedFire = function(self)
+        LNR_Private.FatalIncompatibilityDelayedFire = function()end;
         LNR_Private:Fire("LNR_ERROR_FATAL_INCOMPATIBILITY", icompatibilityType);
-        self:Quit();
+        LNR_Private:Quit();
         error(MAJOR..MINOR..' has died due to a serious incompatibility issue: ' .. icompatibilityType);
-    end, 0.01);
+    end;
 
 end
 
