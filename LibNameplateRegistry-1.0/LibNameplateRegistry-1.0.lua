@@ -45,7 +45,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 5
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 6
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -824,7 +824,7 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
         temp = temp + 1;
         --@end-debug@
 
-        if not PlateRegistry_per_frame[worldChild] and worldChild:IsShown() and IsPlate(worldChild) then
+        if not PlateRegistry_per_frame[worldChild] and IsPlate(worldChild) then
             --@debug@
             Debug(INFO, 'New plate frame (fname: ', worldChild:GetName() , ')');
             --@end-debug@
@@ -843,8 +843,9 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
             HealthBar:HookScript("OnMinMaxChanged", PlateOnChange);
             hooksecurefunc(HealthBar, 'SetParent', SetParentAlert); -- just to detect baddons
 
-            -- since we're here it means the frame is already shown
-            PlateOnShow(worldChild);
+            if worldChild:IsShown() then
+                PlateOnShow(worldChild);
+            end
 
 
 
