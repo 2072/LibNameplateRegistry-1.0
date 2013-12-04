@@ -34,10 +34,6 @@ Most of your code related to nameplates will rely on the following callbacks.
 
 *Fires when a nameplate appears on screen*
 
-Registering this callback enables LibNameplateRegistry's functionalities. Until
-then the library remains completely idle.
-Unregistering this callback puts the library into an idle state.
-
 **Args:**
 
 - *callbackName*: The name of the callback

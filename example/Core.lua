@@ -45,6 +45,7 @@ function Example:OnEnable()
     self:LNR_RegisterCallback("LNR_ON_GUID_FOUND");
     self:LNR_RegisterCallback("LNR_ON_TARGET_PLATE_ON_SCREEN");
     self:LNR_RegisterCallback("LNR_ERROR_FATAL_INCOMPATIBILITY");
+    self:LNR_RegisterCallback("LNR_DEBUG");
 end
 
 function Example:OnDisable()
@@ -73,7 +74,10 @@ function Example:LNR_ON_GUID_FOUND(eventname, frame, GUID, findmethod)
     print(ADDON_NAME, ":", "GUID found using", findmethod, "for", self:GetPlateName(frame), "'s nameplate:", GUID);
 end
 
+function Example:LNR_DEBUG(selfevent, level, nrMinor, ...)
 
+    print(ADDON_NAME, ":", level, "|cff50D000LNR", nrMinor, '|r', ...);
+end
 function Example:LNR_ERROR_FATAL_INCOMPATIBILITY(eventname, icompatibilityType)
     -- Here you want to check if your add-on and LibNameplateRegistry are not
     -- outdated (old TOC). if they're both up to date then it means that

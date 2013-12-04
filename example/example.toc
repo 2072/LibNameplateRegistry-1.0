@@ -10,6 +10,7 @@
 ## Version: 1
 
 ## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibNameplateRegistry-1.0
+## LoadOnDemand: 1
 
 
 embeds.xml

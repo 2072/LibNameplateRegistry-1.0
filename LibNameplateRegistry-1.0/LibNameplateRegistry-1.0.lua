@@ -46,7 +46,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 6
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 7
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -1229,11 +1229,14 @@ LNR_Private.Timer:SetScript('OnFinished', function()
 end); -- }}}
 
 
-
+LNR_Private.UsedCallBacks = 0;
 -- Enable or Disable depending on our main callback usage
 function LNR_Private.callbacks:OnUsed(target, eventname)
+
+    LNR_Private.UsedCallBacks = LNR_Private.UsedCallBacks + 1;
+
     --Debug(INFO, "OnUsed", eventname);
-    if eventname == "LNR_ON_NEW_PLATE" then
+    if LNR_Private.UsedCallBacks == 1 then
         LNR_Private:Enable();
     end
 
@@ -1243,8 +1246,11 @@ function LNR_Private.callbacks:OnUsed(target, eventname)
 end
 
 function LNR_Private.callbacks:OnUnused(target, eventname)
+
+    LNR_Private.UsedCallBacks = LNR_Private.UsedCallBacks - 1;
+
     --Debug(INFO2, "OnUnused", eventname);
-    if eventname == "LNR_ON_NEW_PLATE" then
+    if LNR_Private.UsedCallBacks == 0 then
         LNR_Private:Disable();
     end
 
@@ -1269,8 +1275,8 @@ function LNR_Private:Enable() -- {{{
         return
     end
 
+    Debug(INFO, "Enable", LNR_ENABLED, debugstack(1,2,0));
     LNR_ENABLED = true;
-    Debug(INFO, "Enable", debugstack(1,2,0));
 
     self.EventFrame:RegisterEvent("PLAYER_TARGET_CHANGED");
     self.EventFrame:RegisterEvent("UPDATE_MOUSEOVER_UNIT");
