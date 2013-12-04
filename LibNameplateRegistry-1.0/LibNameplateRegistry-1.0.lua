@@ -1443,3 +1443,8 @@ end
 for target,_ in pairs(LNR_Private.mixinTargets) do
     LNR_Public:Embed(target);
 end
+
+-- relaunch the lib if it was upgraded while enabled
+if LNR_Private.UsedCallBacks ~= 0 then
+    LNR_Private:Enable();
+end
