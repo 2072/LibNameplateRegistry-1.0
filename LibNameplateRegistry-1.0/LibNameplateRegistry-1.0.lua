@@ -46,7 +46,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 7
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 8
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -469,14 +469,14 @@ end
 function LNR_Private:GetBAddon (StackLevel)
     local stack = debugstack(1 + StackLevel,2,0);
     if not stack:lower():find("\\libs\\")
+        and not stack:find("[/\\]AceHook")
         and not stack:find("[/\\]CallbackHandler")
         and not stack:find("[/\\]AceTimer")
-        and not stack:find("[/\\]AceHook")
         and not stack:find("[/\\]AceEvent") then
 
         return stack:match("[/\\]AddOns[/\\]([^/\\]+)[/\\]"), stack;
     else
-        Debug(WARNING, 'SetScript called but not reported:', stack);
+        Debug(WARNING, 'SetScript() called but not reported:', stack);
         return false;
     end
 end
@@ -765,14 +765,19 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
         if not LNR_ENABLED then
             return;
         end
+        local baddon, proof = LNR_Private:GetBAddon(2);
 
-        -- re-apply our hooks then...
-        if script == "OnShow" then
-            frame:HookScript("OnShow", PlateOnShow);
-        elseif script == "OnHide" then
-            frame:HookScript("OnHide", PlateOnHide);
-        --elseif script == "OnMinMaxChanged" then
-          --  frame:HookScript("OnMinMaxChanged", PlateOnChange);
+        -- If an add-on hooks the scripts using AceHook, our original hook is
+        -- still called so we mustn't rehook...
+        if baddon then
+            -- re-apply our hooks then...
+            if script == "OnShow" then
+                frame:HookScript("OnShow", PlateOnShow);
+            elseif script == "OnHide" then
+                frame:HookScript("OnHide", PlateOnHide);
+                --elseif script == "OnMinMaxChanged" then
+                --  frame:HookScript("OnMinMaxChanged", PlateOnChange);
+            end
         end
 
         --@debug@
@@ -780,7 +785,6 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
         --@end-debug@
 
         if not DidSnitched then
-            local baddon, proof = LNR_Private:GetBAddon(2);
             -- try to identify and report the add-on doing this selfish and stupid thing
             if baddon then
                 DidSnitched = true;
