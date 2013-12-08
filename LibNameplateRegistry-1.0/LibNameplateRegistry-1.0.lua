@@ -534,12 +534,14 @@ do
     local testCase1 = false;
     --@end-debug@
 
-    function PlateOnShow (PlateFrame)
+    function PlateOnShow (LNR_ShowHideHookFrame)
         --Debug(INFO, "PlateOnShow", healthBar.LNR_ParentPlate:GetName());
 
         if not LNR_ENABLED then
             return;
         end
+
+        PlateFrame = LNR_ShowHideHookFrame.LNR_ParentPlate;
 
         -- PlateFrame = healthBar.LNR_ParentPlate;
 
@@ -585,12 +587,14 @@ do
         --@end-debug@
     end
 
-    function PlateOnHide (PlateFrame)
+    function PlateOnHide (LNR_ShowHideHookFrame)
         --Debug(INFO2, "PlateOnHide", healthBar.LNR_ParentPlate:GetName());
 
         if not LNR_ENABLED then
             return;
         end
+
+        PlateFrame = LNR_ShowHideHookFrame.LNR_ParentPlate;
 
         if not ActivePlates_per_frame[PlateFrame] then
             LNR_Private:FatalIncompatibilityError('HOOK: OnShow missed');
@@ -731,7 +735,8 @@ end
 do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarget() {{{
 
     local hooksecurefunc = _G.hooksecurefunc;
-    local WorldFrame = WorldFrame
+    local CreateFrame    = _G.CreateFrame;
+    local WorldFrame = WorldFrame;
     local WorldFrameChildrenNumber = 0;
     local temp = 0;
     local actualChildren = 0;
@@ -762,7 +767,7 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
     end
 
     local function SetScriptAlert(frame, script, func)
-        if not LNR_ENABLED then
+        if not LNR_ENABLED  or script ~= "OnMinMaxChanged" then
             return;
         end
         local baddon, proof = LNR_Private:GetBAddon(2);
@@ -771,12 +776,8 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
         -- still called so we mustn't rehook...
         if baddon then
             -- re-apply our hooks then...
-            if script == "OnShow" then
-                frame:HookScript("OnShow", PlateOnShow);
-            elseif script == "OnHide" then
-                frame:HookScript("OnHide", PlateOnHide);
-                --elseif script == "OnMinMaxChanged" then
-                --  frame:HookScript("OnMinMaxChanged", PlateOnChange);
+            if script == "OnMinMaxChanged" then
+                frame:HookScript("OnMinMaxChanged", PlateOnChange);
             end
         end
 
@@ -844,15 +845,24 @@ do -- - Main plate tracking mechanism : :LookForNewPlates(), :CheckPlatesForTarg
             HealthBar = Plate_Parts_Cache[worldChild].statusBar;
             HealthBar.LNR_ParentPlate = worldChild;
 
+            if not worldChild.LNR_ShowHideHookFrame then
+                worldChild.LNR_ShowHideHookFrame = CreateFrame("Frame", nil, worldChild);
+                worldChild.LNR_ShowHideHookFrame.LNR_ParentPlate = worldChild;
+                
+            end
+            worldChild.LNR_ShowHideHookFrame:Show();
+
             -- hooks show and hide event
-            worldChild:HookScript("OnShow", PlateOnShow);
-            worldChild:HookScript("OnHide", PlateOnHide);
-            hooksecurefunc(worldChild, 'SetScript', SetScriptAlert);
+            worldChild.LNR_ShowHideHookFrame:SetScript("OnShow", PlateOnShow);
+            worldChild.LNR_ShowHideHookFrame:SetScript("OnHide", PlateOnHide);
+
             HealthBar:HookScript("OnMinMaxChanged", PlateOnChange);
+
+            hooksecurefunc(worldChild, 'SetScript', SetScriptAlert);
             hooksecurefunc(HealthBar, 'SetParent', SetParentAlert); -- just to detect baddons
 
             if worldChild:IsShown() then
-                PlateOnShow(worldChild);
+                PlateOnShow(worldChild.LNR_ShowHideHookFrame);
             end
 
 
@@ -1307,7 +1317,7 @@ function LNR_Private:Enable() -- {{{
         if not PlateFrame:IsShown() then
             --  but thought as shown
             if ActivePlates_per_frame[PlateFrame] then
-                PlateOnHide(PlateFrame);
+                PlateOnHide(PlateFrame.LNR_ShowHideHookFrame);
             end
         end
     end
@@ -1329,7 +1339,7 @@ function LNR_Private:Enable() -- {{{
         if PlateFrame:IsShown() then
             -- but thought as hidden
             if not ActivePlates_per_frame[PlateFrame] then
-                PlateOnShow(PlateFrame);
+                PlateOnShow(PlateFrame.LNR_ShowHideHookFrame);
             end
         end
     end
@@ -1386,7 +1396,11 @@ function LNR_Public:Quit()
         if ActivePlates_per_frame[frame] or frame:IsShown() then
             LNR_Private:Fire("LNR_ON_RECYCLE_PLATE", frame, data);
         end
-        
+
+        -- remove our hooks and hide our hook frame
+        frame.LNR_ShowHideHookFrame:SetScript("OnShow", nil);
+        frame.LNR_ShowHideHookFrame:SetScript("OnHide", nil);
+        frame.LNR_ShowHideHookFrame:Hide();
     end
 
     -- clear Blizzard Event handler
