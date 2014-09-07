@@ -1,3 +1,5 @@
+[![Gratipay and Bitcoin donation options](http://img.shields.io/gratipay/2072.svg)](https://www.gratipay.com/2072/)
+
 **LibNameplateRegistry-1.0** is an embeddable library providing an abstraction layer for tracking and querying Blizzard's Nameplate frames with ease and efficiency.
 
 Features:
@@ -51,7 +53,7 @@ For general discussion about this library, use the [dedicated thread][forum] on 
 
 
 
-
+Bitcoin donation address: **12wJu3fX2HyNttg4bvsTmpBf66bzFqwVNy**
 
 ![stats](http://www.2072productions.com/to/libnameplateregistrystat.gif)
 
