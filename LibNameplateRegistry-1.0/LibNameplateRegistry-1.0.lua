@@ -38,7 +38,6 @@ This file was last updated on @file-date-iso@ by @file-author@
 
 --
 -- TODO:
--- - Create a frame underneath the main nameplate and use setscript on it as proposed by Adirelle
 -- - Add args error checking on public API (at least in debug mode?)
 -- - Add a method to decommission properly a Blizzard nameplate
 -- - Add a documentation snippet on nameplate modifications
@@ -348,7 +347,7 @@ end
 
 
 --@debug@
--- this is used to diagnos colors when debugging
+-- this is used to diagnose colors when debugging
 local DiffColors = { ['r'] = {}, ['g'] = {}, ['b'] = {}, ['a'] = {} };
 local DiffColors_ExpectedDiffs = 0;
 --@end-debug@
