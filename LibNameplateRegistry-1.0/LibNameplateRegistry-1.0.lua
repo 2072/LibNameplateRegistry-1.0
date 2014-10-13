@@ -4,7 +4,7 @@
         An embeddable library providing an abstraction layer for tracking and
         querying Blizzard's Nameplate frames with ease and efficiency.
 
-        Copyright (c) 2013 by John Wellesz (Archarodim@teaser.fr)
+        Copyright (c) 2013-2014 by John Wellesz (Archarodim@teaser.fr)
         
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser Public License as published by
@@ -1080,7 +1080,7 @@ end
 LNR_Private.GetPlateByGUID = LNR_Public.GetPlateByGUID;
 
 
---- (WIP current alpha only) Gets a platename's frame specific region using a normalized name.
+--- Gets a platename's frame specific region using a normalized name.
 --
 -- Use this API to get an easy and direct access to a specific sub-frame of any
 -- nameplate. This is useful if you want to access data for which
