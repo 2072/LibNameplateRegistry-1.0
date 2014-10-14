@@ -45,7 +45,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 8
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 9
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -1242,7 +1242,7 @@ LNR_Private.Timer:SetScript('OnFinished', function()
 end); -- }}}
 
 
-LNR_Private.UsedCallBacks = 0;
+LNR_Private.UsedCallBacks = LNR_Private.UsedCallBacks or 0;
 -- Enable or Disable depending on our main callback usage
 function LNR_Private.callbacks:OnUsed(target, eventname)
 
