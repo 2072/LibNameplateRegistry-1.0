@@ -453,7 +453,7 @@ function LNR_Private:CheckHookSanity()
 
         count = count + 1;
 
-        if frame:IsShown()then
+        if frame:IsVisible() then
             if not ActivePlates_per_frame[frame] then
                 hookInconsistency = 'OnShow';
                 Debug(ERROR, "CheckHookSanity(): OnShow hook failed");
@@ -540,7 +540,7 @@ do
     --@end-debug@
 
     function PlateOnShow (LNR_ShowHideHookFrame)
-        --Debug(INFO, "PlateOnShow", healthBar.LNR_ParentPlate:GetName());
+        -- Debug(INFO, "PlateOnShow", LNR_ShowHideHookFrame.LNR_ParentPlate:GetName());
 
         if not LNR_ENABLED then
             return;
@@ -593,7 +593,7 @@ do
     end
 
     function PlateOnHide (LNR_ShowHideHookFrame)
-        --Debug(INFO2, "PlateOnHide", healthBar.LNR_ParentPlate:GetName());
+        -- Debug(INFO2, "PlateOnHide", LNR_ShowHideHookFrame.LNR_ParentPlate:GetName());
 
         if not LNR_ENABLED then
             return;
