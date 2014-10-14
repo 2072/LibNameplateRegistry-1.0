@@ -57,6 +57,11 @@ if not LibStub("CallbackHandler-1.0") then
     return;
 end
 
+if not C_Timer then
+    error(MAJOR .. "." .. MINOR .. " requires WoW 6.0 (C_Timer missing)");
+    return;
+end
+
 local _, oldMinor =  LibStub:GetLibrary(MAJOR, true);
 
 -- I do not want to expose the library internals to the outside world in order
@@ -119,6 +124,7 @@ local UnitName              = _G.UnitName;
 local InCombatLockdown      = _G.InCombatLockdown;
 
 local WorldFrame            = _G.WorldFrame;
+local C_Timer               = _G.C_Timer;
 
 --@debug@
 local tostring              = _G.tostring;
@@ -1199,22 +1205,18 @@ LNR_Private.EventFrame:SetScript("OnEvent", LNR_Private.OnEvent);
 
 
 -- Internal timers management -- {{{
-if not LNR_Private.Anim  then
-  LNR_Private.Anim = LNR_Private.EventFrame:CreateAnimationGroup();
-end
-if not LNR_Private.Timer then
-  LNR_Private.Timer = LNR_Private.Anim:CreateAnimation();
-end
-
-LNR_Private.Anim:SetLooping("REPEAT");
-LNR_Private.Timer:SetDuration(0.1);
 
 local TimerDivisor = 0
-LNR_Private.Timer:SetScript('OnFinished', function()
+function LNR_Private.Ticker()
 
     -- if a major incompatibility has been found
     if LNR_Private.FatalIncompatibilityDelayedFire then
         LNR_Private.FatalIncompatibilityDelayedFire();
+        return;
+    end
+
+    if not LNR_ENABLED then
+        -- return and thus don't reschedule ourselves
         return;
     end
 
@@ -1229,18 +1231,19 @@ LNR_Private.Timer:SetScript('OnFinished', function()
         LNR_Private:CheckPlatesForTarget()
     end
 
-    if TimerDivisor == 100 then
-        LNR_Private:CheckHookSanity()
-    end
-
     --@debug@
     if TimerDivisor % 10 == 0 then
         LNR_Private:DebugTests()
     end
     --@end-debug@
+    
+    if TimerDivisor == 100 then
+        LNR_Private:CheckHookSanity()
+    end
 
-end); -- }}}
+    C_Timer.After(0.1, LNR_Private.Ticker);
 
+end -- }}}
 
 LNR_Private.UsedCallBacks = LNR_Private.UsedCallBacks or 0;
 -- Enable or Disable depending on our main callback usage
@@ -1294,9 +1297,9 @@ function LNR_Private:Enable() -- {{{
     self.EventFrame:RegisterEvent("PLAYER_TARGET_CHANGED");
     self.EventFrame:RegisterEvent("UPDATE_MOUSEOVER_UNIT");
 
-    -- Enable timer execution
     LNR_Private.EventFrame:Show();
-    LNR_Private.Anim:Play();
+    -- Enable timer execution
+    C_Timer.After(0.1, self.Ticker);
 
     -- if we were just temporarily disabled then our status is wrong (plate
     -- might have been shown and hidden and thus recycled), we must set things right.
@@ -1358,8 +1361,7 @@ end -- }}}
 function LNR_Private:Disable() -- {{{
     Debug(INFO2, "Disable", debugstack(1,2,0));
 
-    -- disable timers
-    LNR_Private.Anim:Stop();
+    -- disable events
     LNR_Private.EventFrame:Hide();
 
     --@debug@
@@ -1404,8 +1406,6 @@ function LNR_Public:Quit()
 
     -- clear Blizzard Event handler
     LNR_Private.EventFrame:SetScript("OnEvent", nil);
-    -- clear timer execution script
-    LNR_Private.Timer:SetScript('OnFinished', nil);
 
     -- destroy local caches
     twipe(Frame_Children_Cache);  Frame_Children_Cache = nil;
