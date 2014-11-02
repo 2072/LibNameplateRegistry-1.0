@@ -45,7 +45,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 9
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 10
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -344,8 +344,12 @@ function LNR_Private.RawGetPlateName (frame)
     local name = Plate_Parts_Cache[frame].name:GetText();
 
     -- remove the " (*)" if necessary
-    if name:sub(-4) == " (*)" then
-        name = name:sub(1, -5);
+    if name:sub(-3) == "(*)" then
+        if name:sub(-4,-4) == " " then
+            name = name:sub(1, -5);
+        else
+            name = name:sub(1, -4);
+        end
     end
 
     return name;
