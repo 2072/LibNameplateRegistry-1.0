@@ -338,21 +338,15 @@ function LNR_Private:IsPlateTargeted (frame)
 
 end
 
+do
+    -- Create a pattern to remove cross realm label added to the end of plate
+    -- names the number of spaces added before (*) seems to vary depending on
+    -- outside temperature...
+    local FSPAT = "%s*"..((_G.FOREIGN_SERVER_LABEL:gsub("^%s", "")):gsub("[%*()]", "%%%1")).."$"
 
-function LNR_Private.RawGetPlateName (frame)
-
-    local name = Plate_Parts_Cache[frame].name:GetText();
-
-    -- remove the " (*)" if necessary
-    if name:sub(-3) == "(*)" then
-        if name:sub(-4,-4) == " " then
-            name = name:sub(1, -5);
-        else
-            name = name:sub(1, -4);
-        end
+    function LNR_Private.RawGetPlateName (frame)
+        return (Plate_Parts_Cache[frame].name:GetText():gsub(FSPAT,""));
     end
-
-    return name;
 end
 
 
