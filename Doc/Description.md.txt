@@ -10,9 +10,6 @@ Features:
 - Links GUID to nameplates
 - Provides auto-diagnostic features to detect incompatibilities
 
-Please note that **LibNameplateRegistry-1.0** is *still in development* and as
-a result the provided [API][api] is still scarce at the moment.
-
 Do not hesitate to [request features via the ticket system][tickets].
 
 
