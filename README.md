@@ -10,7 +10,8 @@ Features:
 - Links GUID to nameplates
 - Provides auto-diagnostic features to detect incompatibilities
 
-Do not hesitate to [request features via the ticket system][tickets].
+Do not hesitate to [request features via WoWAce's ticket system][tickets] or using
+[GitHub's issue tracker][issues].
 
 
 * * * * *
@@ -27,16 +28,17 @@ To implement **LibNameplateRegistry-1.0** in your add-on:
 
 - Add the following line in your .pkgemeta file:
 
-    -  Libs/LibNameplateRegistry-1.0: git://git.wowace.com/wow/libnameplateregistry-1-0/mainline.git/LibNameplateRegistry-1.0
+    `Libs/LibNameplateRegistry-1.0: git://git.wowace.com/wow/libnameplateregistry-1-0/mainline.git/LibNameplateRegistry-1.0`
 
 - Add LibNameplateRegistry-1.0 to the **OptionalDeps** and **X-embeds** fields of your add-on's TOC file. Example:
 
-    - \#\# OptionalDeps: Ace3, LibNameplateRegistry-1.0
-    - \#\# X-Embeds: Ace3, LibNameplateRegistry-1.0
+    `## OptionalDeps: Ace3, LibNameplateRegistry-1.0`
+
+    `## X-Embeds: Ace3, LibNameplateRegistry-1.0`
 
 - Add the following line in your embeds.xml file:
 
-    - <Include file="Libs\LibNameplateRegistry-1.0\LibNameplateRegistry-1.0.xml" />
+    `<Include file="Libs\LibNameplateRegistry-1.0\LibNameplateRegistry-1.0.xml" />`
 
 - Finally, check the [API documentation][api] which provides a fully working example and [callbacks details][callbacks].
 
@@ -55,6 +57,7 @@ Bitcoin donation address: **12wJu3fX2HyNttg4bvsTmpBf66bzFqwVNy**
 ![stats](http://www.2072productions.com/to/libnameplateregistrystat.gif)
 
 [tickets]: http://www.wowace.com/addons/libnameplateregistry-1-0/tickets/
+[issues]: https://github.com/2072/LibNameplateRegistry-1.0/issues
 [api]: http://www.wowace.com/addons/libnameplateregistry-1-0/pages/api/
 [callbacks]: http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/
 [HHTD]: http://www.wowace.com/addons/healers-have-to-die/

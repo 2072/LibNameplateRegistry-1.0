@@ -1,11 +1,11 @@
 # vim:syntax=YAML:expandtab
 -
     type: markdown
-    input-file: "Doc/Description.md.txt"
+    input-file: "README.md"
     output-page: "main"
 -
     type: markdown
-    input-file: "Doc/Callbacks.md.txt"
+    input-file: "Doc/Callbacks.md"
     output-page: "callbacks"
 
 -
