@@ -45,7 +45,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 10
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 11
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -1207,12 +1207,6 @@ LNR_Private.EventFrame:SetScript("OnEvent", LNR_Private.OnEvent);
 local TimerDivisor = 0
 function LNR_Private.Ticker()
 
-    -- if a major incompatibility has been found
-    if LNR_Private.FatalIncompatibilityDelayedFire then
-        LNR_Private.FatalIncompatibilityDelayedFire();
-        return;
-    end
-
     if not LNR_ENABLED then
         -- return and thus don't reschedule ourselves
         return;
@@ -1444,13 +1438,11 @@ function LNR_Private:FatalIncompatibilityError(icompatibilityType)
     LNR_ENABLED = false; -- will prevent hooks from hooking
 
     -- do not send the message right away because we don't know what's happening. (we might be inside a metatable's callback for all we know...)
-    LNR_Private.FatalIncompatibilityDelayedFire = function(self)
-        LNR_Private.FatalIncompatibilityDelayedFire = function()end;
+    C_Timer.After(0.5, function()
         LNR_Private:Fire("LNR_ERROR_FATAL_INCOMPATIBILITY", icompatibilityType);
         LNR_Private:Quit();
         error(MAJOR..MINOR..' has died due to a serious incompatibility issue: ' .. icompatibilityType);
-    end;
-
+    end);
 end
 
 
