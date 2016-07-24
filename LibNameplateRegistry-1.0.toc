@@ -1,6 +1,6 @@
-## Interface: 60200
-## X-Max-Interface: 60200
-## X-Min-Interface: 60000
+## Interface: 70000
+## X-Max-Interface: 70000
+## X-Min-Interface: 70000
 
 ## Title: Lib: NameplateRegistry-1.0 
 ## Notes: an embeddable library providing an abstraction layer for tracking and querying Blizzard's Nameplate frames with ease and efficiency.
