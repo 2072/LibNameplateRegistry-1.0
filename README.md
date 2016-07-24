@@ -4,10 +4,10 @@
 
 Features:
 ---------
+- Links GUID to nameplates (100% accurately since WoW 7)
 - Provides [callbacks][callbacks] to track nameplate appearance and disappearance
 - Caches and maintain nameplates' related data
 - Provides a simple [API][api] to extract information from nameplate
-- Links GUID to nameplates (100 % accurately since WoW 7)
 - Provides auto-diagnostic features to detect incompatibilities
 
 Do not hesitate to [request features via WoWAce's ticket system][tickets] or using

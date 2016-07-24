@@ -82,7 +82,7 @@ LNR_Private = LNR_Private or {};
 local LNR_Public, oldMinor = LibStub:NewLibrary(MAJOR, MINOR)
 if not LNR_Public then return end -- no upgrade required
 
-local LNR_ENABLED = false; -- must stay local to the file, it's used to disable hooked Scripts which cannot be removed
+local LNR_ENABLED = false; -- must stay local to the file, it was used to disable hooked Scripts which couldn't be removed
 
 LNR_Private.callbacks = LNR_Private.callbacks or LibStub("CallbackHandler-1.0"):New(LNR_Private);
 LNR_Private.Fire      = LNR_Private.callbacks.Fire;
@@ -278,7 +278,7 @@ function LNR_Private:GetUnitTokenFromPlate (frame)
 
     --@debug@
     if frame ~= GetNamePlateForUnit(unitToken) then
-        Debug(ERROR, 'INCONSISTENCY detected in .UnitFrame.unit metadata');
+        Debug(ERROR, 'INCONSISTENCY detected in .unitToken metadata');
     end
     --@end-debug@
 
@@ -376,7 +376,7 @@ do
     local PlateData;
 
     local function IsGUIDValid (plateFrame)
-        if ActivePlates_per_frame[plateFrame].GUID and ActivePlates_per_frame[plateFrame].name == LNR_Private.RawGetPlateName(plateFrame) then
+        if ActivePlates_per_frame[plateFrame].GUID and ActivePlates_per_frame[plateFrame].name == LNR_Private:GetUnitTokenFromPlate(plateFrame) then
             return ActivePlates_per_frame[plateFrame].GUID;
         else
             ActivePlates_per_frame[plateFrame].GUID = false;
@@ -415,15 +415,15 @@ end
 
 -- Diagnostics related methods {{{
 
-function LNR_Private:CheckHookSanity()
+function LNR_Private:CheckTrackingSanity()
 
-    Debug(INFO, "CheckHookSanity() called");
+    Debug(INFO, "CheckTrackingSanity() called");
     if InCombatLockdown() then
         return
     end
 
     local count = 0;
-    local hookInconsistency = false;
+    local TrackingInconsistency = false;
 
     for frame, data in pairs(PlateRegistry_per_frame) do
 
@@ -431,19 +431,19 @@ function LNR_Private:CheckHookSanity()
 
         if frame:IsVisible() then
             if not ActivePlates_per_frame[frame] then
-                hookInconsistency = 'OnShow';
-                Debug(ERROR, "CheckHookSanity(): OnShow hook failed");
+                TrackingInconsistency = 'OnShow';
+                Debug(ERROR, "CheckTrackingSanity(): OnShow tracking failed");
             end
         else
             if ActivePlates_per_frame[frame] then
-                hookInconsistency = 'OnHide';
-                Debug(ERROR, "CheckHookSanity(): OnHide hook failed");
+                TrackingInconsistency = 'OnHide';
+                Debug(ERROR, "CheckTrackingSanity(): OnHide tracking failed");
             end
         end
     end
 
-    if hookInconsistency then
-        self:FatalIncompatibilityError('HOOK: '..hookInconsistency);
+    if TrackingInconsistency then
+        self:FatalIncompatibilityError('TRACKING: '..TrackingInconsistency);
     end
 
 end
@@ -498,7 +498,7 @@ do
 
     function LNR_Private:NAME_PLATE_CREATED(selfEvent, namePlateFrameBase)
         -- A new frame was created from scratch
-        Debug(INFO, 'NAME_PLATE_CREATED', 'frameName:', namePlateFrameBase:GetName(), 'unitToken:', namePlateFrameBase.UnitFrame.unit);
+        --Debug(INFO, 'NAME_PLATE_CREATED', 'frameName:', namePlateFrameBase:GetName(), 'unitToken:', namePlateFrameBase.UnitFrame.unit);
 
         PlateRegistry_per_frame[namePlateFrameBase] = {};
     end
@@ -515,7 +515,7 @@ do
         --Debug(INFO, 'NAME_PLATE_UNIT_ADDED', 'unitToken:', namePlateUnitToken, 'frameName:', namePlateFrameBase:GetName());
 
         testCase1 = false;
-        if ActivePlates_per_frame[namePlateFrameBase] then -- test onHide hook
+        if ActivePlates_per_frame[namePlateFrameBase] then -- test REMOVED tracking
             testCase1 = true;
         end
 
@@ -568,12 +568,10 @@ do
         --@end-debug@
 
         if not ActivePlates_per_frame[namePlateFrameBase] then
-            Debug(ERROR, "added missed");
-            LNR_Private:FatalIncompatibilityError('HOOK: added missed');
+            Debug(ERROR, "ADDED missed");
+            LNR_Private:FatalIncompatibilityError('Tracking: ADDED missed');
             return;
         end
-
-        assert(ActivePlates_per_frame[namePlateFrameBase].unitToken == namePlateUnitToken, "unitToken inconsistency");
 
         --@debug@
         if not callbacks_consisistency_check[namePlateFrameBase] then
@@ -584,7 +582,6 @@ do
         --@end-debug@
 
         PlateData = PlateRegistry_per_frame[namePlateFrameBase];
-        --PlateData.GUID = false; -- why???
 
         LNR_Private:Fire("LNR_ON_RECYCLE_PLATE", namePlateFrameBase, PlateData);
 
@@ -934,7 +931,7 @@ function LNR_Private.Ticker()
     --@end-debug@
     
     if TimerDivisor == 100 then
-        LNR_Private:CheckHookSanity()
+        LNR_Private:CheckTrackingSanity()
     end
 
     C_Timer.After(0.1, LNR_Private.Ticker);
@@ -967,12 +964,6 @@ function LNR_Private.callbacks:OnUnused(target, eventname)
     
 end
 
-
-
-
-
-
-
 function LNR_Private:Enable() -- {{{
     -- if we try to enable ourself while in combat blizzard might destroy the
     -- library with a SCRIPT_RAN_TO_LONG Lua exception...
@@ -996,23 +987,26 @@ function LNR_Private:Enable() -- {{{
     -- Enable timer execution
     C_Timer.After(0.1, self.Ticker);
 
-    -- if we were just temporarily disabled then our status is wrong (plate
-    -- might have been shown and hidden and thus recycled), we must set things right.
-    --
-    -- We need to do several passes because we need to make things happen as they
-    -- would have in reality else inconsistency may happen in library's users' code...
-    -- 1stly: bust ghosts frame
-    -- 2ndly: update those still on screen
-    -- 3rdly: show which are not
-    -- 4thly: show new frame created while we were not runing
+    --@debug@
+    local tCountTest = {1,2}
+    local function tCount(t)
+        local count = 0
 
-    local foundUnitToken;
+        for i in pairs(t) do
+            count = count + 1
+        end
+
+        return count
+    end 
+    -- assert that our state is clean
+    assert(tCount(tCountTest) == 2, 'tCount test failure');
+    assert(tCount(ActivePlates_per_frame) == tCount(ActivePlateFrames_per_unitToken), 'uncleaned state: count mismatch');
+    assert(tCount(ActivePlates_per_frame) == 0, 'uncleaned state: old data exists: '..tCount(ActivePlates_per_frame));
+    --@end-debug@
 
     local function findPlateUnitToken(plate, tokenID) -- only to be called on shown namePlates
-        foundUnitToken = "nameplate"..tokenID
-
-        if GetNamePlateForUnit(foundUnitToken) == plate then
-            return foundUnitToken
+        if GetNamePlateForUnit("nameplate"..tokenID) == plate then
+            return "nameplate"..tokenID
         end
 
         if tokenID > 2000 then
@@ -1022,100 +1016,23 @@ function LNR_Private:Enable() -- {{{
         return findPlateUnitToken(plate, tokenID + 1)
     end
 
-    -- 1stly: bust ghosts frame
-    for PlateFrame, data in pairs (PlateRegistry_per_frame) do
-        -- plate is currently hidden
-        if not PlateFrame:IsShown() then
-            --  but thought as shown
-            if ActivePlates_per_frame[PlateFrame] then
-                self:NAME_PLATE_UNIT_REMOVED(nil, data.unitToken);
-            end
-        end
-    end
-
-    -- 2ndly: update those still on screen
-    for PlateFrame, data in pairs (PlateRegistry_per_frame) do
-
-        -- plate is currently shown
-        if PlateFrame:IsShown() then
-            -- it's still on screen, it might have changed though...
-            if ActivePlates_per_frame[PlateFrame] then
-
-                -- does it points to a different unit?
-                if GetNamePlateForUnit(data.unitToken) ~= PlateFrame then
-                    -- make it disappear (NOTE: the data.unitToken points to an invalid unit...)
-                    self:NAME_PLATE_UNIT_REMOVED(nil, data.unitToken);
-
-                    -- we must find its new unitToken
-                    if findPlateUnitToken(PlateFrame, 1) then
-
-                        if ActivePlateFrames_per_unitToken[foundUnitToken] then
-                            self:NAME_PLATE_UNIT_REMOVED(nil, foundUnitToken);
-                        end
-
-                        self:NAME_PLATE_UNIT_ADDED(nil, foundUnitToken);
-                    else
-                        error('failed to find unit token for shown nameplate frame, ut:'..foundUnitToken..', fn:'..PlateFrame:GetName());
-                    end
-                end
-
-            end
-        end
-    end
-
-    
-
-    -- 3rdly: show which are not
-    for PlateFrame, data in pairs (PlateRegistry_per_frame) do
-
-        -- plate is currently shown
-        if PlateFrame:IsShown() then
-            -- but thought as hidden
-            if not ActivePlates_per_frame[PlateFrame] then
-
-                -- we must find its unitToken
-                if findPlateUnitToken(PlateFrame, 1) then
-                    self:NAME_PLATE_UNIT_ADDED(nil, foundUnitToken);
-                else
-                    error('failed to find unit token for shown nameplate frame, ut:'..foundUnitToken..', fn:'..PlateFrame:GetName());
-                end
-            end
-        end
-    end
-
-    -- 4thly: show new frames created while we were not runing
+    -- register nameplate frames created while we were not runing
     for _, PlateFrame in pairs(GetNamePlates()) do
 
         if not PlateFrame:IsShown() then
-            error('GetNamePlates returns unshown nameplates')
+            error('GetNamePlates returns unshown nameplates!?!')
         end
 
         -- if it's unkown to us
         if not ActivePlates_per_frame[PlateFrame] then
 
-            self:NAME_PLATE_CREATED(nil, PlateFrame);
-
-            if findPlateUnitToken(PlateFrame, 1) then
-                self:NAME_PLATE_UNIT_ADDED(nil, foundUnitToken);
-            else
-                error('failed to find unit token for new nameplate frame, ut:'..foundUnitToken..', fn:'..PlateFrame:GetName())
+            if not PlateRegistry_per_frame[PlateFrame] then
+                self:NAME_PLATE_CREATED(nil, PlateFrame);
             end
+
+            self:NAME_PLATE_UNIT_ADDED(nil, findPlateUnitToken(PlateFrame, 1));
         end
     end
-
-    --@debug@
-    local function tCount(t)
-        local count = 0
-
-        for i in pairs(t) do
-            count = count + 1
-        end
-
-        return count
-    end
-    assert(tCount(ActivePlates_per_frame) == tCount(ActivePlateFrames_per_unitToken), 'count mismatch')
-    --@end-debug@
-
 
     self:PLAYER_TARGET_CHANGED();
 
@@ -1127,6 +1044,11 @@ function LNR_Private:Disable() -- {{{
 
     -- disable events
     LNR_Private.EventFrame:Hide();
+
+    -- make as if all nameplates were unshown (as tracking won't be accurate anymore)
+    for unitToken, frame in pairs(ActivePlateFrames_per_unitToken) do
+        self:NAME_PLATE_UNIT_REMOVED(nil, unitToken);
+    end
 
     --@debug@
     twipe(callbacks_consisistency_check);
@@ -1153,15 +1075,6 @@ function LNR_Public:Quit(reason)
     Debug(WARNING, "Quit called", debugstack(1,2,0));
 
     LNR_Private:Disable();
-
-    -- Fire "LNR_ON_RECYCLE_PLATE" for all nameplate (all our hooks are invalid)
-    for frame, data in pairs(PlateRegistry_per_frame) do
-
-        -- play it safe if this version is bugged we want the upgraded one to behave
-        if ActivePlates_per_frame[frame] or frame:IsShown() then
-            LNR_Private:Fire("LNR_ON_RECYCLE_PLATE", frame, data);
-        end
-    end
 
     -- clear Blizzard Event handler
     LNR_Private.EventFrame:SetScript("OnEvent", nil);
@@ -1198,7 +1111,7 @@ LNR_Private.Quit = LNR_Public.Quit;
 
 
 function LNR_Private:FatalIncompatibilityError(icompatibilityType)
-    LNR_ENABLED = false; -- will prevent hooks from hooking
+    LNR_ENABLED = false; -- will disable ticker
 
     -- do not send the message right away because we don't know what's happening. (we might be inside a metatable's callback for all we know...)
     C_Timer.After(0.5, function()
