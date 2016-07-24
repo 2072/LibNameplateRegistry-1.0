@@ -241,12 +241,8 @@ function (t, plateFrame)
                 t[regionName] =  Frame_Children_Cache[plateFrame][1].name;
             elseif regionName == 'statusBar' then
                 t[regionName] =  Frame_Children_Cache[plateFrame][1].healthBar;
-           -- elseif regionName == 'level' then
-           --     t[regionName] = Frame_Regions_Cache[  Frame_Children_Cache[plateFrame][1]  ][4];
             elseif regionName == 'raidIcon' then
                 t[regionName] =  Frame_Children_Cache[plateFrame][1].RaidTargetFrame;
---            elseif regionName == 'eliteIcon' then
---                t[regionName] = Frame_Regions_Cache[  Frame_Children_Cache[plateFrame][1]  ][7];
             else
                 return false;
             end
@@ -376,7 +372,7 @@ do
     local PlateData;
 
     local function IsGUIDValid (plateFrame)
-        if ActivePlates_per_frame[plateFrame].GUID and ActivePlates_per_frame[plateFrame].name == LNR_Private:GetUnitTokenFromPlate(plateFrame) then
+        if ActivePlates_per_frame[plateFrame].GUID and ActivePlates_per_frame[plateFrame].name == (UnitName(LNR_Private:GetUnitTokenFromPlate(plateFrame))) then
             return ActivePlates_per_frame[plateFrame].GUID;
         else
             ActivePlates_per_frame[plateFrame].GUID = false;
@@ -404,7 +400,7 @@ do
         if PlateData[entry] == (Getters[entry](plateFrame)) then
             return 0;
         else
-            Debug(WARNING, 'Cache validation failed for entry', entry, 'on plate named', PlateData.name);
+            Debug(WARNING, 'Cache validation failed for entry', entry, 'on plate named', PlateData.name, PlateData[entry], 'V/S', (Getters[entry](plateFrame)));
             return 1;
         end
     end
@@ -539,11 +535,15 @@ do
         PlateData.reaction, PlateData.type = LNR_Private.RawGetPlateType(namePlateFrameBase);
         PlateData.GUID      = UnitGUID(namePlateUnitToken);
 
+        if not PlateData.GUID then
+            Debug(WARNING, 'GUID unavailable on newly shown plate for unit', PlateData.unitToken);
+        end
+
         LNR_Private:Fire("LNR_ON_NEW_PLATE", namePlateFrameBase, PlateData);
 
         -- is it currently targeted?
         if UnitExists('target') and UnitIsUnit('target', namePlateUnitToken) then
-            if CurrentTarget ~= namePlateFrameBase then
+            if CurrentTarget and CurrentTarget ~= namePlateFrameBase then
                 Debug(ERROR, 'target tracking inconsistency');
                 self:PLAYER_TARGET_CHANGED();
             end
@@ -721,12 +721,7 @@ end
 -- 
 -- function Example:LNR_ERROR_FATAL_INCOMPATIBILITY(eventname, icompatibilityType)
 --     -- Here you want to check if your add-on and LibNameplateRegistry are not
---     -- outdated (old TOC). if they're both up to date then it means that
---     -- another add-on author thinks his add-on is more important than yours. In
---     -- this later case you can register LNR_ERROR_SETPARENT_ALERT and
---     -- LNR_ERROR_SETSCRIPT_ALERT which will detect such behaviour and will give
---     -- you the name of the incompatible add-on so you can inform your users properly
---     -- about what's happening instead of just silently "not working".
+--     -- outdated (old TOC).
 -- end
 -- 
 --
@@ -794,6 +789,8 @@ LNR_Private.GetPlateByGUID = LNR_Public.GetPlateByGUID;
 
 
 --- Gets a platename's frame specific region using a normalized name.
+-- 
+-- (should no longer be used: In WoW 7 nameplates can be linked directly to unit IDs to get the proper information)
 --
 -- Use this API to get an easy and direct access to a specific sub-frame of any
 -- nameplate. This is useful if you want to access data for which
@@ -801,7 +798,7 @@ LNR_Private.GetPlateByGUID = LNR_Public.GetPlateByGUID;
 --
 -- The result is cached for each frame making subsequent identical calls very fast.
 --
--- The following regions are supported: 'name', 'statusBar', 'highlight', 'level', 'raidIcon', 'eliteIcon'.
+-- The following regions are supported: 'name', 'statusBar', 'raidIcon'.
 -- If you need to access a specific region which is not supported, please make
 -- a feature request using the ticket system.
 --

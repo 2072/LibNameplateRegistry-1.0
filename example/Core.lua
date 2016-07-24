@@ -80,11 +80,6 @@ function Example:LNR_DEBUG(selfevent, level, nrMinor, ...)
 end
 function Example:LNR_ERROR_FATAL_INCOMPATIBILITY(eventname, icompatibilityType)
     -- Here you want to check if your add-on and LibNameplateRegistry are not
-    -- outdated (old TOC). if they're both up to date then it means that
-    -- another add-on author thinks his add-on is more important than yours. In
-    -- this later case you can register LNR_ERROR_SETPARENT_ALERT and
-    -- LNR_ERROR_SETSCRIPT_ALERT which will detect such behaviour and will give
-    -- you the name of the incompatible add-on so you can inform your users properly
-    -- about what's happening instead of just silently "not working".
+    -- outdated (old TOC).
 end
 
