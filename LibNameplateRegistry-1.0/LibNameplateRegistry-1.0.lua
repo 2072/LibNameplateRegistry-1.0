@@ -4,7 +4,7 @@
         An embeddable library providing an abstraction layer for tracking and
         querying Blizzard's Nameplate frames with ease and efficiency.
 
-        Copyright (c) 2013-2014 by John Wellesz (Archarodim@teaser.fr)
+        Copyright (c) 2013-2016 by John Wellesz (Archarodim@teaser.fr)
         
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser Public License as published by
@@ -39,13 +39,11 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 -- TODO:
 -- - Add args error checking on public API (at least in debug mode?)
--- - Add a method to decommission properly a Blizzard nameplate
--- - Add a documentation snippet on nameplate modifications
 -- - Add a :GetPlateClass() method
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 12
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 13
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -182,7 +180,7 @@ function(t, frame)
 
                 if not t[childNum] then
                     t[childNum] = nil;
-                    LNR_Private:FatalIncompatibilityError('NAMEPLATE_MANIFEST');
+                    --LNR_Private:FatalIncompatibilityError('NAMEPLATE_MANIFEST'); -- no longer fatal in WoW 7
                     error("CFCache: Child" .. childNum .. " not found.");
                 end
 
@@ -211,7 +209,7 @@ function(t, frame)
 
                 if not t[regionNum] then
                     t[regionNum] = nil;
-                    LNR_Private:FatalIncompatibilityError('NAMEPLATE_MANIFEST');
+                    --LNR_Private:FatalIncompatibilityError('NAMEPLATE_MANIFEST'); -- no longer fatal in WoW 7
                     --@debug@
                     Debug(ERROR, 'CFCache', regionNum, 'not found, regions:', frame:GetName() );
                     --@end-debug@
@@ -715,13 +713,15 @@ end
 -- 
 -- 
 -- function Example:LNR_ON_GUID_FOUND(eventname, frame, GUID, findmethod)
+--     -- This is now rarely useful since WoW 7 since GUIDs are linked directly on nameplate appearance.
+--     -- Sometimes though some data about a unit may not be available right away due to heavy lag.
 --     print(ADDON_NAME, ":", "GUID found using", findmethod, "for", self:GetPlateName(frame), "'s nameplate:", GUID);
 -- end
 -- 
 -- 
 -- function Example:LNR_ERROR_FATAL_INCOMPATIBILITY(eventname, icompatibilityType)
 --     -- Here you want to check if your add-on and LibNameplateRegistry are not
---     -- outdated (old TOC).
+--     -- outdated (old TOC) and display a nice error message to your user.
 -- end
 -- 
 --
@@ -790,7 +790,8 @@ LNR_Private.GetPlateByGUID = LNR_Public.GetPlateByGUID;
 
 --- Gets a platename's frame specific region using a normalized name.
 -- 
--- (should no longer be used: In WoW 7 nameplates can be linked directly to unit IDs to get the proper information)
+-- DEPRECATED: Since WoW 7 nameplates can be linked directly to unit IDs to get
+-- the proper information directly using standard WoW API.
 --
 -- Use this API to get an easy and direct access to a specific sub-frame of any
 -- nameplate. This is useful if you want to access data for which

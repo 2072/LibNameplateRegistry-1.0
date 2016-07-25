@@ -109,22 +109,15 @@ When this callback fires, a Lua error is also raised and the library
 self-destructs (through a precisely controlled implosion without causing any
 collateral damages).
 
-This usually happens when:
+This usually happens when inconsistencies are detected while tracking nameplate's frames.
 
-- The nameplate manifest has changed.
-- Inconsistencies are detected while hooking nameplate's frames.
-
-The first can be caused by an upgrade of World of Warcraft (Blizzard regularly
-changes nameplates frames).
-
-When not in combat LibNameplateRegistry checks its hooks consistency every 10 seconds.
+When not in combat LibNameplateRegistry checks its tracking consistency every 10 seconds.
 
 **Args:**
 
 - *callbackName*: The name of the callback
 - *incompatibilityType*: A short text string describing the problem:
     
-    - *"NAMEPLATE_MANIFEST"*: The nameplates' frame are no longer following the expected format.
     - *"TRACKING: OnHide"* or *"TRACKING: OnShow"*: LibNameplateRegistry missed several nameplate show and hide events.
     - *"TRACKING: OnShow missed"* a nameplate is hidden but was never shown...
 

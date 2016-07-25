@@ -4,11 +4,10 @@
 
 Features:
 ---------
-- Links GUID to nameplates (100% accurately since WoW 7)
+- Links GUID to nameplates (now reliably since WoW 7)
 - Provides [callbacks][callbacks] to track nameplate appearance and disappearance
 - Caches and maintain nameplates' related data
-- Provides a simple [API][api] to extract information from nameplate
-- Provides auto-diagnostic features to detect incompatibilities
+- Provides a simple [API][api] to get information about nameplate frames
 
 Do not hesitate to [request features via WoWAce's ticket system][tickets] or using
 [GitHub's issue tracker][issues].
@@ -34,10 +33,6 @@ To implement **LibNameplateRegistry-1.0** in your add-on:
 
 - Finally, check the [API documentation][api] which provides a fully working example and [callbacks details][callbacks].
 
-
-
-
-This library is an adaptation of the *NameplateRegistry.lua* sub-module of [Healers Have To die][HHTD].
 
 
 For general discussion about this library, use the [dedicated thread][forum] on WoWAce.com forum.

@@ -1,5 +1,5 @@
 --[=[
-example
+This example code is hereby in the public domain
 --]=]
 
 
