@@ -734,13 +734,6 @@ end
 -- @param plateFrame the platename's root frame
 -- @return The name of the unit as displayed on the nameplate or nil
 function LNR_Public:GetPlateName(plateFrame)
-
-    --@debug@
-    if ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].name and ActivePlates_per_frame[plateFrame].name ~= LNR_Private.RawGetPlateName(plateFrame) then
-        error('GN: Nameplate inconsistency detected: rpn:' .. tostring(ActivePlates_per_frame[plateFrame].name) .. ' rawpn:' .. tostring(LNR_Private.RawGetPlateName(plateFrame)));
-    end
-    --@end-debug@
-
     return ActivePlates_per_frame[plateFrame] and ActivePlates_per_frame[plateFrame].name or nil;
 end
 
@@ -788,10 +781,11 @@ end
 LNR_Private.GetPlateByGUID = LNR_Public.GetPlateByGUID;
 
 
---- Gets a platename's frame specific region using a normalized name.
+--- (DEPRECATED) Gets a platename's frame specific region using a normalized name.
 -- 
--- DEPRECATED: Since WoW 7 nameplates can be linked directly to unit IDs to get
--- the proper information directly using standard WoW API.
+-- Since WoW 7 nameplates can be linked to unit IDs to get
+-- the proper information directly using the standard WoW API thus
+-- GetPlateRegion should not be used anymore.
 --
 -- Use this API to get an easy and direct access to a specific sub-frame of any
 -- nameplate. This is useful if you want to access data for which
