@@ -43,7 +43,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 13
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 14
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -56,7 +56,7 @@ if not LibStub("CallbackHandler-1.0") then
 end
 
 if not C_Timer then
-    error(MAJOR .. "." .. MINOR .. " requires WoW 6.0 (C_Timer missing)");
+    error(MAJOR .. "." .. MINOR .. " requires WoW 7.0 (C_Timer missing)");
     return;
 end
 
@@ -180,7 +180,6 @@ function(t, frame)
 
                 if not t[childNum] then
                     t[childNum] = nil;
-                    --LNR_Private:FatalIncompatibilityError('NAMEPLATE_MANIFEST'); -- no longer fatal in WoW 7
                     error("CFCache: Child" .. childNum .. " not found.");
                 end
 
@@ -209,7 +208,6 @@ function(t, frame)
 
                 if not t[regionNum] then
                     t[regionNum] = nil;
-                    --LNR_Private:FatalIncompatibilityError('NAMEPLATE_MANIFEST'); -- no longer fatal in WoW 7
                     --@debug@
                     Debug(ERROR, 'CFCache', regionNum, 'not found, regions:', frame:GetName() );
                     --@end-debug@
@@ -485,16 +483,15 @@ end
 
 -- }}}
 
--- Event handlers : NAME_PLATE_CREATED, NAME_PLATE_UNIT_ADDED, NAME_PLATE_UNIT_REMOVED, PLAYER_TARGET_CHANGED, UPDATE_MOUSEOVER_UNIT, PLAYER_REGEN_ENABLED {{{
+-- Event handlers : NAME_PLATE_UNIT_ADDED, NAME_PLATE_UNIT_REMOVED, PLAYER_TARGET_CHANGED, UPDATE_MOUSEOVER_UNIT, PLAYER_REGEN_ENABLED {{{
 
 do
     local namePlateFrameBase, PlateData, PlateName, PlateUnitID;
 
     function LNR_Private:NAME_PLATE_CREATED(selfEvent, namePlateFrameBase)
-        -- A new frame was created from scratch
-        --Debug(INFO, 'NAME_PLATE_CREATED', 'frameName:', namePlateFrameBase:GetName(), 'unitToken:', namePlateFrameBase.UnitFrame.unit);
+        -- This event is unreliable as it may fire before the library is loaded...
 
-        PlateRegistry_per_frame[namePlateFrameBase] = {};
+        -- Debug(INFO, 'NAME_PLATE_CREATED', 'frameName:', namePlateFrameBase:GetName());
     end
 
     --@debug@
@@ -504,6 +501,10 @@ do
     function LNR_Private:NAME_PLATE_UNIT_ADDED(selfEvent, namePlateUnitToken)
         namePlateFrameBase = GetNamePlateForUnit(namePlateUnitToken);
         ActivePlateFrames_per_unitToken[namePlateUnitToken] = namePlateFrameBase;
+
+        if not PlateRegistry_per_frame[namePlateFrameBase] then
+            PlateRegistry_per_frame[namePlateFrameBase] = {}
+        end
 
         --@debug@
         --Debug(INFO, 'NAME_PLATE_UNIT_ADDED', 'unitToken:', namePlateUnitToken, 'frameName:', namePlateFrameBase:GetName());
@@ -970,7 +971,6 @@ function LNR_Private:Enable() -- {{{
     LNR_ENABLED = true;
 
     self.EventFrame:RegisterEvent("PLAYER_TARGET_CHANGED");
-    self.EventFrame:RegisterEvent("NAME_PLATE_CREATED");
     self.EventFrame:RegisterEvent("NAME_PLATE_UNIT_ADDED");
     self.EventFrame:RegisterEvent("NAME_PLATE_UNIT_REMOVED");
     self.EventFrame:RegisterEvent("UPDATE_MOUSEOVER_UNIT");
@@ -1017,11 +1017,6 @@ function LNR_Private:Enable() -- {{{
 
         -- if it's unkown to us
         if not ActivePlates_per_frame[PlateFrame] then
-
-            if not PlateRegistry_per_frame[PlateFrame] then
-                self:NAME_PLATE_CREATED(nil, PlateFrame);
-            end
-
             self:NAME_PLATE_UNIT_ADDED(nil, findPlateUnitToken(PlateFrame, 1));
         end
     end
@@ -1093,7 +1088,8 @@ function LNR_Public:Quit(reason)
 
     Debug = nil;
     LNR_Public.Quit = function()end; -- if a previous version of the library crashes, this might be called again when upgrading
-    LNR_Private.Enable = LNR_Public.Quit;
+    LNR_Private.Quit    = LNR_Public.Quit;
+    LNR_Private.Enable  = LNR_Public.Quit;
     LNR_Private.Disable = LNR_Public.Quit;
 
     return LNR_Private; -- return private stuff that can be useful
