@@ -43,7 +43,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 15
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 16
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -488,22 +488,40 @@ end
 do
     local namePlateFrameBase, PlateData, PlateName, PlateUnitID;
 
+    --[=[
     function LNR_Private:NAME_PLATE_CREATED(selfEvent, namePlateFrameBase)
         -- This event is unreliable as it may fire before the library is loaded...
 
         -- Debug(INFO, 'NAME_PLATE_CREATED', 'frameName:', namePlateFrameBase:GetName());
     end
+    --]=]
 
     --@debug@
     local testCase1 = false;
     --@end-debug@
+
+    local dataMeta = {__index =
+        function (t, k)
+            -- because UnitName() can return Unknwon right after a player logs in...
+            if k == 'name' then
+                t[k] = (UnitName(t.unitToken)) or false
+                if not t[k] or t[k] == 'Unknown' then
+                    t[k] = nil;
+
+                    return 'Unknown';
+                end
+            end
+
+            return t[k]
+        end
+    };
 
     function LNR_Private:NAME_PLATE_UNIT_ADDED(selfEvent, namePlateUnitToken)
         namePlateFrameBase = GetNamePlateForUnit(namePlateUnitToken);
         ActivePlateFrames_per_unitToken[namePlateUnitToken] = namePlateFrameBase;
 
         if not PlateRegistry_per_frame[namePlateFrameBase] then
-            PlateRegistry_per_frame[namePlateFrameBase] = {}
+            PlateRegistry_per_frame[namePlateFrameBase] = setmetatable({}, dataMeta);
         end
 
         --@debug@
@@ -531,6 +549,8 @@ do
         
         PlateData.unitToken = namePlateUnitToken;
         PlateData.name      = UnitName(namePlateUnitToken);
+        -- if UnitName fails, store nothing and let the metaTable retry the query later
+        if PlateData.name == 'Unknown' then PlateData.name = nil end
         PlateData.reaction, PlateData.type = LNR_Private.RawGetPlateType(namePlateFrameBase);
         PlateData.GUID      = UnitGUID(namePlateUnitToken);
 
@@ -830,7 +850,7 @@ do
             return nil;
         end
 
-        if Name == Data.name and LNR_Private:ValidateCache(CurrentPlate, 'name') == 0 then -- ValidateCache() will fail only rarely (upon mind control events) so it's not a big deal if we miss a few frames then... (to keep in mind)
+        if Name == Data.name and LNR_Private:ValidateCache(CurrentPlate, 'name') == 0 then
             return CurrentPlate, Data;
         else
             return iter();
