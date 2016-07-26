@@ -43,7 +43,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 14
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 15
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -639,6 +639,11 @@ function LNR_Private:UPDATE_MOUSEOVER_UNIT()
 
         if UnitExists("mouseover") then
             mouseoverNameplate = GetNamePlateForUnit("mouseover");
+
+            if not mouseoverNameplate then
+                return;
+            end
+
             data = ActivePlates_per_frame[mouseoverNameplate]
 
             if data and not data.GUID then -- not sure if still useful...
