@@ -43,7 +43,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 16
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 17
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -504,15 +504,18 @@ do
         function (t, k)
             -- because UnitName() can return Unknwon right after a player logs in...
             if k == 'name' then
-                t[k] = (UnitName(t.unitToken)) or false
+                t[k] = (UnitName(t.unitToken)) or false;
+
                 if not t[k] or t[k] == 'Unknown' then
                     t[k] = nil;
-
                     return 'Unknown';
                 end
-            end
 
-            return t[k]
+                return t[k];
+            else
+                -- only the name key is handled
+                return nil;
+            end
         end
     };
 
