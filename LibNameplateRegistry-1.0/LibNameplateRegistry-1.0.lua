@@ -973,11 +973,14 @@ function LNR_Private:Enable() -- {{{
 
     LNR_Private.EventFrame:Show();
     Debug(INFO, "EventFrameShown!");
+
+
+
+    --@debug@
     -- Enable timer execution
     C_Timer.After(0.1, self.Ticker);
     Debug(INFO, "Ticker set!");
 
-    --@debug@
     local tCountTest = {1,2}
     local function tCount(t)
         local count = 0
