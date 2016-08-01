@@ -43,7 +43,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 17
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 18
 
 if not LibStub then
     error(MAJOR .. " requires LibStub");
@@ -143,7 +143,7 @@ local unpack                = _G.unpack;
 
 -- Debug templates
 
-local ERROR     = 1;
+local ERROR     = 1; -- if HHTD and Decursive are loaded thses will be reported through Decursive's report functionality
 local WARNING   = 2;
 local INFO      = 3;
 local INFO2     = 4;
@@ -322,7 +322,7 @@ do
         if name then
             return (name:gsub(FSPAT,""));
         else
-            Debug(WARNING, 'nil name target', UnitName(frame:GetName()));
+            Debug(WARNING, 'RawGetPlateName(): nil name for', frame:GetName());
             return 'nilName'..frame:GetName();
         end
     end
@@ -407,40 +407,6 @@ end
 
 -- Diagnostics related methods {{{
 
-function LNR_Private:CheckTrackingSanity()
-
-    Debug(INFO, "CheckTrackingSanity() called");
-    if InCombatLockdown() then
-        return
-    end
-
-    local count = 0;
-    local TrackingInconsistency = false;
-
-    for frame, data in pairs(PlateRegistry_per_frame) do
-
-        count = count + 1;
-
-        if frame:IsVisible() then
-            if not ActivePlates_per_frame[frame] then
-                TrackingInconsistency = 'OnShow';
-                Debug(ERROR, "CheckTrackingSanity(): OnShow tracking failed");
-            end
-        else
-            if ActivePlates_per_frame[frame] then
-                TrackingInconsistency = 'OnHide';
-                Debug(ERROR, "CheckTrackingSanity(): OnHide tracking failed");
-            end
-        end
-    end
-
-    if TrackingInconsistency then
-        self:FatalIncompatibilityError('TRACKING: '..TrackingInconsistency);
-    end
-
-end
-
-
 --@debug@
 do
     local ShownPlateCount = 0;
@@ -496,9 +462,7 @@ do
     end
     --]=]
 
-    --@debug@
-    local testCase1 = false;
-    --@end-debug@
+    local Insane = false;
 
     local dataMeta = {__index =
         function (t, k)
@@ -527,14 +491,14 @@ do
             PlateRegistry_per_frame[namePlateFrameBase] = setmetatable({}, dataMeta);
         end
 
-        --@debug@
         --Debug(INFO, 'NAME_PLATE_UNIT_ADDED', 'unitToken:', namePlateUnitToken, 'frameName:', namePlateFrameBase:GetName());
 
-        testCase1 = false;
+        Insane = false;
         if ActivePlates_per_frame[namePlateFrameBase] then -- test REMOVED tracking
-            testCase1 = true;
+            Insane = true;
         end
 
+        --@debug@
         if not callbacks_consisistency_check[namePlateFrameBase] then
             callbacks_consisistency_check[namePlateFrameBase] = 1;
         else
@@ -576,24 +540,30 @@ do
 
         --@debug@
         --Debug(INFO, "Nameplate on screen:", PlateData.unitToken, PlateData.name, PlateData.reaction, PlateData.GUID);
-        if testCase1 then
-            error('removed event failed for ' .. tostring(LNR_Private.RawGetPlateName(namePlateFrameBase)));
-        end
         --@end-debug@
+
+        if Insane then
+            Debug(ERROR, "REMOVED event missed");
+            error(('REMOVED event never fired for nameplateFrame %s (%s)'):format(tostring(namePlateFrameBase:GetName()), tostring(LNR_Private.RawGetPlateName(namePlateFrameBase))));
+        end
     end
 
     function LNR_Private:NAME_PLATE_UNIT_REMOVED(selfEvent, namePlateUnitToken)
         namePlateFrameBase = ActivePlateFrames_per_unitToken[namePlateUnitToken];
 
-        --@debug@
-        --Debug(INFO2, 'NAME_PLATE_UNIT_REMOVED', 'unitToken:', namePlateUnitToken);
-        --@end-debug@
-
         if not ActivePlates_per_frame[namePlateFrameBase] then
-            Debug(ERROR, "ADDED missed");
+            Debug(ERROR, "ADDED missed", namePlateUnitToken);
             LNR_Private:FatalIncompatibilityError('Tracking: ADDED missed');
             return;
         end
+
+        --@debug@
+        if not namePlateFrameBase:IsVisible() then
+            Debug(ERROR, 'nameplate was already hidden on NAME_PLATE_UNIT_REMOVED', namePlateUnitToken, namePlateFrameBase:GetName());
+        end
+
+        --Debug(INFO2, 'NAME_PLATE_UNIT_REMOVED', 'unitToken:', namePlateUnitToken, 'is visible?', namePlateFrameBase:IsVisible());
+        --@end-debug@
 
         --@debug@
         if not callbacks_consisistency_check[namePlateFrameBase] then
@@ -676,7 +646,7 @@ function LNR_Private:UPDATE_MOUSEOVER_UNIT()
                 if unitName == data.name and self:ValidateCache(mouseoverNameplate, 'name') == 0 then
                     self:Fire("LNR_ON_GUID_FOUND", mouseoverNameplate, data.GUID, 'mouseover');
                     --@debug@
-                    Debug(INFO, 'Guid found for', data.name, 'mouseover');
+                    Debug(ERROR, 'Guid found for', data.name, 'mouseover'); -- should not happen in WoW 7
                     --@end-debug@
                 else
                     Debug(HighlightFailsReported and INFO2 or WARNING, 'bad cache on mouseover check:', "'"..unitName.."'", "V/S:", "'"..data.name.."'", 'mouseover', unitName == data.name, self:ValidateCache(mouseoverNameplate, 'name'));
@@ -951,10 +921,6 @@ function LNR_Private.Ticker()
     end
     --@end-debug@
     
-    if TimerDivisor == 100 then
-        LNR_Private:CheckTrackingSanity()
-    end
-
     C_Timer.After(0.1, LNR_Private.Ticker);
 
 end -- }}}
@@ -998,14 +964,18 @@ function LNR_Private:Enable() -- {{{
     Debug(INFO, "Enable", LNR_ENABLED, debugstack(1,2,0));
     LNR_ENABLED = true;
 
+    Debug(INFO, "Registrering events...");
     self.EventFrame:RegisterEvent("PLAYER_TARGET_CHANGED");
     self.EventFrame:RegisterEvent("NAME_PLATE_UNIT_ADDED");
     self.EventFrame:RegisterEvent("NAME_PLATE_UNIT_REMOVED");
     self.EventFrame:RegisterEvent("UPDATE_MOUSEOVER_UNIT");
+    Debug(INFO2, "done.");
 
     LNR_Private.EventFrame:Show();
+    Debug(INFO, "EventFrameShown!");
     -- Enable timer execution
     C_Timer.After(0.1, self.Ticker);
+    Debug(INFO, "Ticker set!");
 
     --@debug@
     local tCountTest = {1,2}
@@ -1036,20 +1006,29 @@ function LNR_Private:Enable() -- {{{
         return findPlateUnitToken(plate, tokenID + 1)
     end
 
+    Debug(INFO, "Looking for shown nameplates...");
     -- register nameplate frames created while we were not runing
     for _, PlateFrame in pairs(GetNamePlates()) do
 
         if not PlateFrame:IsShown() then
-            error('GetNamePlates returns unshown nameplates!?!')
+            Debug(ERROR, 'GetNamePlates returns unshown nameplates!?!');
         end
 
         -- if it's unkown to us
         if not ActivePlates_per_frame[PlateFrame] then
-            self:NAME_PLATE_UNIT_ADDED(nil, findPlateUnitToken(PlateFrame, 1));
+            -- Since we are calling the event handler directly make sure to not
+            -- stop if an error is thrown in there (lost 2 hours of my life
+            -- figuring out why a call to error() there was creating a rift in
+            -- time and space...)
+            pcall(self.NAME_PLATE_UNIT_ADDED, self, nil,
+            findPlateUnitToken(PlateFrame, 1));
+            Debug(INFO, 'START ADDED ', findPlateUnitToken(PlateFrame, 1));
         end
     end
+    Debug(INFO2, "LFSN done.");
 
     self:PLAYER_TARGET_CHANGED();
+    Debug(INFO2, "Enable END");
 
 end -- }}}
 
