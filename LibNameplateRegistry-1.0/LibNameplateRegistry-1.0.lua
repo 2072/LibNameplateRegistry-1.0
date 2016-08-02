@@ -121,6 +121,8 @@ local UnitGUID              = _G.UnitGUID;
 local UnitName              = _G.UnitName;
 local UnitIsUnit            = _G.UnitIsUnit;
 local UnitSelectionColor    = _G.UnitSelectionColor;
+local UnitReaction          = _G.UnitReaction;
+local UnitPlayerControlled  = _G.UnitPlayerControlled;
 local InCombatLockdown      = _G.InCombatLockdown;
 
 local WorldFrame            = _G.WorldFrame;
@@ -329,37 +331,25 @@ do
 end
 
 
---@debug@
--- this is used to diagnose colors when debugging
-local DiffColors = { ['r'] = {}, ['g'] = {}, ['b'] = {}, ['a'] = {} };
-local DiffColors_ExpectedDiffs = 0;
---@end-debug@
-
 function LNR_Private.RawGetPlateType (frame)
 
-    local r, g, b, a = UnitSelectionColor(LNR_Private:GetUnitTokenFromPlate(frame));
+    local unitToken = LNR_Private:GetUnitTokenFromPlate(frame);
 
-    --@debug@
-    DiffColors['r'][r] = true;
-    DiffColors['g'][g] = true;
-    DiffColors['b'][b] = true;
-    DiffColors['a'][a] = true;
-    --@end-debug@
+    local reaction = UnitReaction('player', unitToken);
 
-    -- the following block is borrowed from TidyPlates
-    if r < .01 then 	-- Friendly
-        if b < .01 and g > .99 then return "FRIENDLY", "NPC"
-        elseif b > .99 and g < .01 then return "FRIENDLY", "PLAYER"
-        end
-    elseif r > .99 then
-        if b < .01 and g > .99 then return "NEUTRAL", "NPC"
-        elseif b < .01 and g < .01 then return "HOSTILE", "NPC"
-        end
-    elseif r > .53 then
-        if g > .5 and g < .6 and b > .99 then return "TAPPED", "NPC" end 	-- .533, .533, .99	-- Tapped Mob
+    if reaction > 4 then
+        reaction = 'FRIENDLY';
+    elseif reaction > 2 then
+        reaction = 'NEUTRAL';
+    else
+        reaction = 'HOSTILE';
     end
 
-    return "HOSTILE", "PLAYER"
+    --TODO check if tapped state is still detectable in some ways (API removed in 7.0.3)
+    local unitType = UnitPlayerControlled(LNR_Private:GetUnitTokenFromPlate(frame)) and 'PLAYER' or 'NPC';
+
+
+    return reaction, unitType;
 end
 
 
@@ -410,7 +400,6 @@ end
 --@debug@
 do
     local ShownPlateCount = 0;
-    local DiffColorsCount = 0;
     function LNR_Private:DebugTests()
 
         --Debug(INFO2, 'DebugTests() called');
@@ -424,25 +413,8 @@ do
 
         if count ~= ShownPlateCount then
             ShownPlateCount = count;
-            Debug(INFO2, DiffColorsCount, ' dCs - ', ShownPlateCount, 'plates are shown:', unpack(names));
+            Debug(INFO2, ShownPlateCount, 'plates are shown:', unpack(names));
         end
-
-        -- check number of different health bars colors
-        local counts = {['r'] = 0, ['g'] = 0, ['b'] = 0, ['a'] = 0};
-        count = 0;
-        for component,values in pairs(DiffColors) do
-            for value in pairs(values) do
-                counts[component] = counts[component] + 1;
-                count = count + 1;
-            end
-        end
-
-        if count ~= DiffColorsCount then
-
-            DiffColorsCount = count;
-            Debug(INFO2, DiffColorsCount, 'health colors:', 'r=', counts['r'], 'g=', counts['g'], 'b=', counts['b'], 'a=', counts['a']);
-        end
-
     end
 end
 --@end-debug@
@@ -626,9 +598,6 @@ function LNR_Private:UPDATE_MOUSEOVER_UNIT()
     local unitName = "";
     local mouseoverNameplate, data;
     if GetMouseFocus() == WorldFrame then -- the cursor is either on a name plate or on a 3d model (ie: not on a unit-frame)
-        --@debug@
-        Debug(INFO, "UPDATE_MOUSEOVER_UNIT");
-        --@end-debug@
 
         if UnitExists("mouseover") then
             mouseoverNameplate = GetNamePlateForUnit("mouseover");
@@ -636,6 +605,10 @@ function LNR_Private:UPDATE_MOUSEOVER_UNIT()
             if not mouseoverNameplate then
                 return;
             end
+
+            --@debug@
+            Debug(INFO, "UPDATE_MOUSEOVER_UNIT", UnitReaction('mouseover', 'player'), UnitPlayerControlled('mouseover'), '*' ,LNR_Private.RawGetPlateType(mouseoverNameplate));
+            --@end-debug@
 
             data = ActivePlates_per_frame[mouseoverNameplate]
 
