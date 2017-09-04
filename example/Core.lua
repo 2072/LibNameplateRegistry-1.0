@@ -58,7 +58,7 @@ function Example:LNR_ON_NEW_PLATE(eventname, plateFrame, plateData)
     print(ADDON_NAME, ":", plateData.name, "'s nameplate appeared!");
     print(ADDON_NAME, ":", "It's a", R, plateData.type, W, "and", R, plateData.reaction, W, plateData.GUID and ("we know its GUID: " .. plateData.GUID) or "GUID not yet known");
 
-    print(ADDON_NAME, ":", 'direct region access test: (level)', self:GetPlateRegion(plateFrame, 'level'):GetText(), 'has elite icon?', self:GetPlateRegion(plateFrame, 'eliteIcon'):IsShown() and 'YES!' or 'no');
+    --print(ADDON_NAME, ":", 'direct region access test: (level)', self:GetPlateRegion(plateFrame, 'level'):GetText(), 'has elite icon?', self:GetPlateRegion(plateFrame, 'eliteIcon'):IsShown() and 'YES!' or 'no');
 end
 
 function Example:LNR_ON_TARGET_PLATE_ON_SCREEN(eventname, plateFrame, plateData)
