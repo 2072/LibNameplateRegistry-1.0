@@ -1,5 +1,5 @@
-## Interface: 70300
-## X-Max-Interface: 70300
+## Interface: 80000
+## X-Max-Interface: 80000
 ## X-Min-Interface: 70000
 
 ## Title: Lib: NameplateRegistry-1.0 
@@ -16,7 +16,7 @@
 ## X-Embeds: Libstub, CallbackHandler-1.0
 
 ## X-ReleaseDate: "@project-date-iso@"
-## X-eMail: archarodim@teaser.fr
+## X-eMail: LibNameplateRegistry@2072productions.com
 ## X-Website: http://www.wowace.com/addons/libnameplateregistry/
 
 embeds.xml
