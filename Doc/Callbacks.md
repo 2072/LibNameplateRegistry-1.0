@@ -138,4 +138,4 @@ Useful when developing, you should register this callback before `LNR_ON_NEW_PLA
 - *...*: unlimited list of debug arguments that can be past to print();
 
 
-[api]: http://www.wowace.com/addons/libnameplateregistry-1-0/pages/api/
+[api]: https://www.wowace.com/projects/libnameplateregistry-1-0/pages/api
