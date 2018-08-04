@@ -4,7 +4,7 @@ Callbacks details
 
 See the [API documentation][api] for a complete example and details on how to register to these callbacks.
 
-The 'plateData' table
+The `plateData` table
 ---------------------
 
 Several of the following callbacks have a *plateData* argument. This argument
@@ -31,7 +31,7 @@ Main callbacks
 
 Most of your code related to nameplates will rely on the following callbacks.
 
-### LNR_ON_NEW_PLATE
+### `LNR_ON_NEW_PLATE`
 
 *Fires when a nameplate appears on screen*
 
@@ -43,7 +43,7 @@ Most of your code related to nameplates will rely on the following callbacks.
 
 * * * * * * * *
 
-### LNR_ON_RECYCLE_PLATE
+### `LNR_ON_RECYCLE_PLATE`
 
 *Fires when a nameplate disappears from the screen.*
 
@@ -59,7 +59,7 @@ reused to display other units.
 
 * * * * * * * *
 
-### LNR_ON_GUID_FOUND
+### `LNR_ON_GUID_FOUND`
 
 *Fires when a GUID is successfully linked to a nameplate*
 
@@ -78,7 +78,7 @@ link nameplates to unit GUIDs.
 
 * * * * * * * *
 
-### LNR_ON_TARGET_PLATE_ON_SCREEN
+### `LNR_ON_TARGET_PLATE_ON_SCREEN`
 
 *Fires whenever a targeted unit's nameplate becomes visible or when a currently
 displayed nameplate is targeted*
@@ -100,7 +100,7 @@ diagnose issues your users could face.
 These callbacks allows you to react to incompatibility situations and inform
 your users accurately on what's happening.
 
-### LNR_ERROR_FATAL_INCOMPATIBILITY
+### `LNR_ERROR_FATAL_INCOMPATIBILITY`
 
 *Fires when LibNameplateRegistry internal diagnostics detect something
 terribly wrong*
@@ -123,11 +123,11 @@ When not in combat LibNameplateRegistry checks its tracking consistency every 10
 
 * * * * * * * *
 
-### LNR_DEBUG
+### `LNR_DEBUG`
 
 *Fires at every 'Debug()' call in LibNameplateRegistry*
 
-Useful when developing, you should register this callback before LNR_ON_NEW_PLATE.
+Useful when developing, you should register this callback before `LNR_ON_NEW_PLATE`.
 
 
 **Args:**

@@ -43,8 +43,8 @@ Bitcoin donation address: **12wJu3fX2HyNttg4bvsTmpBf66bzFqwVNy**
 
 [tickets]: http://www.wowace.com/addons/libnameplateregistry-1-0/tickets/
 [issues]: https://github.com/2072/LibNameplateRegistry-1.0/issues
-[api]: http://www.wowace.com/addons/libnameplateregistry-1-0/pages/api/
-[callbacks]: http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/
+[api]: https://www.wowace.com/projects/libnameplateregistry-1-0/pages/api
+[callbacks]: https://www.wowace.com/projects/libnameplateregistry-1-0/pages/callbacks
 [HHTD]: http://www.wowace.com/addons/healers-have-to-die/
 [forum]: http://forums.wowace.com/showthread.php?t=20676
 
