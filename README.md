@@ -39,12 +39,12 @@ For general discussion about this library, use the [dedicated thread][forum] on 
 
 Bitcoin donation address: **12wJu3fX2HyNttg4bvsTmpBf66bzFqwVNy**
 
-![stats](http://www.2072productions.com/to/libnameplateregistrystat.gif)
+![stats](https://www.2072productions.com/to/libnameplateregistrystat.gif)
 
-[tickets]: http://www.wowace.com/addons/libnameplateregistry-1-0/tickets/
+[tickets]: https://www.wowace.com/addons/libnameplateregistry-1-0/tickets/
 [issues]: https://github.com/2072/LibNameplateRegistry-1.0/issues
 [api]: https://www.wowace.com/projects/libnameplateregistry-1-0/pages/api
 [callbacks]: https://www.wowace.com/projects/libnameplateregistry-1-0/pages/callbacks
-[HHTD]: http://www.wowace.com/addons/healers-have-to-die/
-[forum]: http://forums.wowace.com/showthread.php?t=20676
+[HHTD]: https://www.wowace.com/projects/h-h-t-d
+[forum]: https://forums.wowace.com/showthread.php?t=20676
 
