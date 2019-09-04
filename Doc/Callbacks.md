@@ -117,7 +117,7 @@ When not in combat LibNameplateRegistry checks its tracking consistency every 10
 
 - *callbackName*: The name of the callback
 - *incompatibilityType*: A short text string describing the problem:
-    
+
     - *"TRACKING: OnHide"* or *"TRACKING: OnShow"*: LibNameplateRegistry missed several nameplate show and hide events.
     - *"TRACKING: OnShow missed"* a nameplate is hidden but was never shown...
 

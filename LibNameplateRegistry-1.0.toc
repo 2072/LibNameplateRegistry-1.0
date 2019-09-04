@@ -10,7 +10,7 @@
 #@end-non-retail@
 
 
-## Title: Lib: NameplateRegistry-1.0 
+## Title: Lib: NameplateRegistry-1.0
 ## Notes: an embeddable library providing an abstraction layer for tracking and querying Blizzard's Nameplate frames with ease and efficiency.
 ## Author: John Wellesz
 ## DefaultState: enabled
