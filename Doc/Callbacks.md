@@ -12,8 +12,8 @@ is a table containing the following fields:
 
 - **.unitToken**: The unitToken of the nameplate's associated unit (added in WoW 7.0).
 - **.name**: The name of the nameplate's associated unit.
-- **.reaction**: The reaction of the unit as returned by the [:GetPlateReaction() API](http://www.wowace.com/addons/libnameplateregistry-1-0/pages/api/#w-addon-get-plate-reaction-plate-frame)
-- **.type**: The type of the nameplate as returned by the [:GetPlateType() API](http://www.wowace.com/addons/libnameplateregistry-1-0/pages/api/#w-addon-get-plate-type-plate-frame)
+- **.reaction**: The reaction of the unit as returned by the [:GetPlateReaction() API](https://www.wowace.com/projects/libnameplateregistry-1-0/pages/api#w-addon-get-plate-reaction-plate-frame)
+- **.type**: The type of the nameplate as returned by the [:GetPlateType() API](https://www.wowace.com/projects/libnameplateregistry-1-0/pages/api#w-addon-get-plate-type-plate-frame)
 - **.GUID**: The GUID of the nameplate's associated unit **which may be nil if it's not been found and cached already.**
 
 This *plateData* argument is a direct reference to the library internal

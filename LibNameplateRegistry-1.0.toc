@@ -25,7 +25,7 @@
 
 ## X-ReleaseDate: "@project-date-iso@"
 ## X-eMail: LibNameplateRegistry@2072productions.com
-## X-Website: http://www.wowace.com/addons/libnameplateregistry/
+## X-Website: https://www.wowace.com/projects/libnameplateregistry-1-0
 ## X-Curse-Project-ID: 62519
 
 embeds.xml

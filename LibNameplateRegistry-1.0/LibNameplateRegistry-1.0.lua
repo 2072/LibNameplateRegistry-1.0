@@ -17,7 +17,7 @@
     GNU Lesser Public License for more details.
 
     You should have received a copy of the GNU Lesser Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 This file was last updated on @file-date-iso@ by @file-author@
 
@@ -650,12 +650,12 @@ end
 -- public methods: :GetPlateName(), :GetPlateReaction(), :GetPlateType(), :GetPlateGUID(), :GetPlateByGUID(), :GetPlateRegion(), :EachPlateByName() {{{
 
 --- ==LibNameplateRegistry-1.0 public API documentation\\\\
--- Check the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks' page]] if you want details about those.\\\\
+-- Check the [[https://www.wowace.com/projects/libnameplateregistry-1-0/pages/callbacks|Callbacks' page]] if you want details about those.\\\\
 --
 -- Here is a fully working little add-on as an example displaying nameplates' information as they become available.\\
--- You can download a ready to go archive of this example add-on [[http://www.j2072.teaser-hosting.com/dropbox/example.rar|here]]\\\\
+-- You can download a ready to go archive of this example add-on [[https://github.com/2072/LibNameplateRegistry-1.0/tree/master/example|from GitHub]]\\\\
 --
--- For a more advanced usage example you can take a look at the [[http://www.wowace.com/addons/healers-have-to-die/files/|latest version of Healers Have To Die]].\\
+-- For a more advanced usage example you can take a look at the [[https://www.wowace.com/projects/h-h-t-d/files|latest version of Healers Have To Die]].\\
 --
 -- @usage
 -- local ADDON_NAME, T = ...;
@@ -849,7 +849,7 @@ end -- }}}
 --
 -- @paramsig callbackName [, method] [, extraArg]
 --
--- @param callbackName name of a callback (see the [[http://www.wowace.com/addons/libnameplateregistry-1-0/pages/callbacks/|Callbacks' page]])
+-- @param callbackName name of a callback (see the [[https://www.wowace.com/projects/libnameplateregistry-1-0/pages/callbacks|Callbacks' page]])
 --
 -- @param method (optional) The method to call when the callback fires, if ommitted, addon:eventname is used
 --

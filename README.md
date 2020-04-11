@@ -37,7 +37,7 @@ For general discussion about this library, use the [dedicated thread][forum] on 
 
 
 
-Bitcoin donation address: **12wJu3fX2HyNttg4bvsTmpBf66bzFqwVNy**
+Bitcoin donation address: [**12wJu3fX2HyNttg4bvsTmpBf66bzFqwVNy**](bitcoin:12wJu3fX2HyNttg4bvsTmpBf66bzFqwVNy)
 
 ![stats](https://www.2072productions.com/to/libnameplateregistrystat.gif)
 
