@@ -43,7 +43,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 21
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 22
 
 -- used to be set using debug packager tags but they've been broken ever since the new wowace.com...
 -- see: https://www.curseforge.com/forums/wow-sites/wow-sites-feedback/185461-curse-keyword-substitution-not-applied-for
@@ -136,6 +136,7 @@ local C_Timer               = _G.C_Timer;
 local GetNamePlateForUnit   = _G.C_NamePlate.GetNamePlateForUnit
 local GetNamePlateSizes     = _G.C_NamePlate.GetNamePlateSizes
 local GetNamePlates         = _G.C_NamePlate.GetNamePlates
+local canaccessvalue        = _G.canaccessvalue or function(_) return true; end
 --local GetNumNamePlateMotionTypes = C_NamePlate.GetNumNamePlateMotionTypes
 --local SetNamePlateSizes          = C_NamePlate.SetNamePlateSizes
 
@@ -163,6 +164,9 @@ local ActivePlates_per_frame    =  {};
 local ActivePlateFrames_per_unitToken =  {};
 local CurrentTarget             = false;
 local HasTarget                 = false;
+local _, _, _, tocversion = GetBuildInfo();
+
+local restrictionsCheckNeeded = tocversion >= 120000
 
 --@debug@
 local callbacks_consisistency_check = {};
@@ -515,8 +519,10 @@ do
 
         LNR_Private:Fire("LNR_ON_NEW_PLATE", namePlateFrameBase, PlateData);
 
+        local isNTarget = UnitExists('target') and UnitIsUnit('target', namePlateUnitToken)
+
         -- is it currently targeted?
-        if UnitExists('target') and UnitIsUnit('target', namePlateUnitToken) then
+        if canaccessvalue(isNTarget) and isNTarget then
             if CurrentTarget and CurrentTarget ~= namePlateFrameBase then
                 Debug(ERROR, 'target tracking inconsistency');
                 self:PLAYER_TARGET_CHANGED();
