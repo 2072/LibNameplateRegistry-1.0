@@ -43,7 +43,7 @@ This file was last updated on @file-date-iso@ by @file-author@
 --
 
 -- Library framework {{{
-local MAJOR, MINOR = "LibNameplateRegistry-1.0", 22
+local MAJOR, MINOR = "LibNameplateRegistry-1.0", 23
 
 -- used to be set using debug packager tags but they've been broken ever since the new wowace.com...
 -- see: https://www.curseforge.com/forums/wow-sites/wow-sites-feedback/185461-curse-keyword-substitution-not-applied-for
@@ -509,7 +509,7 @@ do
         PlateData.unitToken = namePlateUnitToken;
         PlateData.name      = UnitName(namePlateUnitToken);
         -- if UnitName fails, store nothing and let the metaTable retry the query later
-        if PlateData.name == 'Unknown' then PlateData.name = nil end
+        if canaccessvalue(PlateData.name) and PlateData.name == 'Unknown' then PlateData.name = nil end
         PlateData.reaction, PlateData.type = LNR_Private.RawGetPlateType(namePlateFrameBase);
         PlateData.GUID      = UnitGUID(namePlateUnitToken);
 
@@ -770,7 +770,7 @@ function LNR_Public:GetPlateByGUID (GUID)
 
     if GUID then
         for frame, data in pairs(ActivePlates_per_frame) do
-            if data.GUID == GUID and LNR_Private:ValidateCache(frame, 'GUID') == 0 then
+            if canaccessvalue(data.GUID) and data.GUID == GUID and LNR_Private:ValidateCache(frame, 'GUID') == 0 then
                 return frame, data;
             end
         end
@@ -825,7 +825,7 @@ do
             return nil;
         end
 
-        if Name == Data.name and LNR_Private:ValidateCache(CurrentPlate, 'name') == 0 then
+        if canaccessvalue(Data.name) and Name == Data.name and LNR_Private:ValidateCache(CurrentPlate, 'name') == 0 then
             return CurrentPlate, Data;
         else
             return iter();
